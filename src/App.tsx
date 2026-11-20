@@ -73,6 +73,7 @@ export default function App(){
  const rollDice=()=>{
   if(!started||!current||dice!==null||busy||champion||passPending)return;
   setBusy(true);
+  playSound("roll");
   const rolled=Math.floor(Math.random()*6)+1;
   rollTimer.current=window.setTimeout(()=>{
    setBusy(false);
@@ -93,7 +94,9 @@ export default function App(){
   const result=moveToken(players,turn,tokenIndex,rolled);
   if(result.players===players)return;
   setPlayers(result.players);
+  playSound(result.captured>0?"capture":"move");
   if(winner(result.players[turn])){
+   playSound("win");
    clearTimers();setChampion(current.name);setMessage(current.name+" wins the game!");setDice(null);setChoices([]);return;
   }
   if(rolled===6||result.captured>0){
@@ -130,7 +133,7 @@ export default function App(){
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div><button className="back-btn" onClick={resetGame}>↻ Restart</button></div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={choices} onMove={moveSelected}/></div>
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
-     <Dice value={dice} rolling={busy}/>
+     <div className="game-controls"><Dice value={dice} rolling={busy}/><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      <button className="roll-btn" onClick={rollDice} disabled={dice!==null||busy||!!champion||passPending||!!current?.ai}>{busy?"ROLLING…":passPending?"PASSING TURN":current?.ai?"COMPUTER PLAYING":"ROLL DICE"}</button>
      <p className="game-message" aria-live="polite">{message}</p>
      <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span><small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
