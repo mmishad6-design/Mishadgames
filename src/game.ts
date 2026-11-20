@@ -74,8 +74,10 @@ function isBlockade(players: Player[], x: number, y: number): boolean {
 function pathIsClear(player: Player, token: Token, dice: number, players: Player[]): boolean {
   const start = token.progress === -1 ? -1 : token.progress;
   const end = token.progress === -1 ? 0 : token.progress + dice;
-  // Only the shared outer track can contain a blockade. Home-lane movement is private.
+  // Starting cells are safe squares: a pair parked there does not block other tokens passing through.
   for (let step = Math.max(0, start + 1); step <= Math.min(50, end); step++) {
+    const absoluteTrackIndex = (START[player.color] + step) % TRACK.length;
+    if (Object.values(START).includes(absoluteTrackIndex)) continue;
     const [x, y] = ROUTES[player.color][step];
     if (isBlockade(players, x, y)) return false;
   }
