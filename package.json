@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "build": "npm run test:logic && tsc -b && vite build",
     "test:logic": "node scripts/game-logic-tests.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
