@@ -45,7 +45,26 @@ export default function App(){
  const [mode,setMode]=useState<Mode>("local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
  const [dice,setDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[message,setMessage]=useState("Roll the dice to begin.");
  const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
- const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined);\n const audioContext=useRef<AudioContext|null>(null);\n const playSound=(kind:"roll"|"move"|"capture"|"win")=>{\n  if(!soundEnabled||typeof window==="undefined")return;\n  try{\n   const AudioContextClass=window.AudioContext;\n   if(!AudioContextClass)return;\n   const ctx=audioContext.current??(audioContext.current=new AudioContextClass());\n   if(ctx.state==="suspended")void ctx.resume();\n   const now=ctx.currentTime;\n   const tones=kind==="roll"?[{f:220,d:.07},{f:330,d:.07},{f:440,d:.09}]:kind==="capture"?[{f:520,d:.09},{f:740,d:.13}]:kind==="win"?[{f:392,d:.12},{f:494,d:.12},{f:587,d:.12},{f:784,d:.24}]:[{f:440,d:.08},{f:587,d:.1}];\n   let offset=0;\n   for(const tone of tones){\n    const osc=ctx.createOscillator(),gain=ctx.createGain();\n    osc.type=kind==="roll"?"triangle":"sine";osc.frequency.setValueAtTime(tone.f,now+offset);\n    gain.gain.setValueAtTime(.0001,now+offset);gain.gain.exponentialRampToValueAtTime(kind==="roll"?.045:.065,now+offset+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+offset+tone.d);\n    osc.connect(gain);gain.connect(ctx.destination);osc.start(now+offset);osc.stop(now+offset+tone.d+.015);offset+=tone.d+.018;\n   }\n  }catch{/* Audio is optional; gameplay must never depend on it. */}\n };
+ const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined);
+ const audioContext=useRef<AudioContext|null>(null);
+ const playSound=(kind:"roll"|"move"|"capture"|"win")=>{
+  if(!soundEnabled||typeof window==="undefined")return;
+  try{
+   const AudioContextClass=window.AudioContext;
+   if(!AudioContextClass)return;
+   const ctx=audioContext.current??(audioContext.current=new AudioContextClass());
+   if(ctx.state==="suspended")void ctx.resume();
+   const now=ctx.currentTime;
+   const tones=kind==="roll"?[{f:220,d:.07},{f:330,d:.07},{f:440,d:.09}]:kind==="capture"?[{f:520,d:.09},{f:740,d:.13}]:kind==="win"?[{f:392,d:.12},{f:494,d:.12},{f:587,d:.12},{f:784,d:.24}]:[{f:440,d:.08},{f:587,d:.1}];
+   let offset=0;
+   for(const tone of tones){
+    const osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.type=kind==="roll"?"triangle":"sine";osc.frequency.setValueAtTime(tone.f,now+offset);
+    gain.gain.setValueAtTime(.0001,now+offset);gain.gain.exponentialRampToValueAtTime(kind==="roll"?.045:.065,now+offset+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+offset+tone.d);
+    osc.connect(gain);gain.connect(ctx.destination);osc.start(now+offset);osc.stop(now+offset+tone.d+.015);offset+=tone.d+.018;
+   }
+  }catch{/* Audio is optional; gameplay must never depend on it. */}
+ };
  const current=players[turn];
  const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
  const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
