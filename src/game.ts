@@ -60,11 +60,36 @@ export function tokenPosition(color: Color, token: Token, index: number): [numbe
   return ROUTES[color][token.progress];
 }
 
-export function legalTokens(player: Player, dice: number): number[] {
+function isBlockade(players: Player[], x: number, y: number): boolean {
+  return players.some(player => {
+    const sameCell = player.tokens.filter(token => {
+      if (token.progress < 0 || token.progress > 50) return false;
+      const [tx, ty] = ROUTES[player.color][token.progress];
+      return tx === x && ty === y;
+    });
+    return sameCell.length >= 2;
+  });
+}
+
+function pathIsClear(player: Player, token: Token, dice: number, players: Player[]): boolean {
+  const start = token.progress === -1 ? -1 : token.progress;
+  const end = token.progress === -1 ? 0 : token.progress + dice;
+  // Only the shared outer track can contain a blockade. Home-lane movement is private.
+  for (let step = Math.max(0, start + 1); step <= Math.min(50, end); step++) {
+    const [x, y] = ROUTES[player.color][step];
+    if (isBlockade(players, x, y)) return false;
+  }
+  return true;
+}
+
+export function legalTokens(player: Player, dice: number, players: Player[] = [player]): number[] {
   if (!Number.isInteger(dice) || dice < 1 || dice > 6) return [];
   return player.tokens.flatMap((token, index) => {
-    if (token.progress === -1) return dice === 6 ? [index] : [];
-    if (Number.isInteger(token.progress) && token.progress >= 0 && token.progress < 56 && token.progress + dice <= 56) return [index];
+    if (token.progress === -1) {
+      return dice === 6 && pathIsClear(player, token, dice, players) ? [index] : [];
+    }
+    if (Number.isInteger(token.progress) && token.progress >= 0 && token.progress < 56 &&
+        token.progress + dice <= 56 && pathIsClear(player, token, dice, players)) return [index];
     return [];
   });
 }
