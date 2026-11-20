@@ -102,7 +102,7 @@ export function moveToken(
 ): { players: Player[]; captured: number; finished: boolean } {
   const player = players[playerIndex];
   if (!player || !Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex >= player.tokens.length ||
-      !legalTokens(player, dice).includes(tokenIndex)) {
+      !legalTokens(player, dice, players).includes(tokenIndex)) {
     return { players, captured: 0, finished: false };
   }
 
@@ -138,8 +138,31 @@ export function winner(player: Player): boolean {
   return player.tokens.length === 4 && player.tokens.every(token => token.progress === 56);
 }
 
+function isThreatened(players: Player[], playerIndex: number, color: Color, progress: number): boolean {
+  if (progress < 0 || progress > 50) return false;
+  const absoluteTarget = (START[color] + progress) % TRACK.length;
+  if (SAFE.has(absoluteTarget)) return false;
+
+  const ownTokensOnCell = players[playerIndex].tokens.filter(token => {
+    if (token.progress < 0 || token.progress > 50) return false;
+    return (START[color] + token.progress) % TRACK.length === absoluteTarget;
+  }).length;
+  // A friendly pair forms a blockade and cannot be captured.
+  if (ownTokensOnCell >= 2) return false;
+
+  return players.some((opponent, opponentIndex) => {
+    if (opponentIndex === playerIndex) return false;
+    return opponent.tokens.some(token => {
+      if (token.progress < 0 || token.progress > 50) return false;
+      const absoluteOpponent = (START[opponent.color] + token.progress) % TRACK.length;
+      const distance = (absoluteTarget - absoluteOpponent + TRACK.length) % TRACK.length;
+      return distance >= 1 && distance <= 6;
+    });
+  });
+}
+
 export function chooseAiToken(players: Player[], playerIndex: number, dice: number, legal: number[]): number {
-  if (!legal.length) return -1;
+  if (!legal.length || !players[playerIndex]) return -1;
   const player = players[playerIndex];
   let best = legal[0];
   let bestScore = -Infinity;
@@ -147,23 +170,33 @@ export function chooseAiToken(players: Player[], playerIndex: number, dice: numb
   for (const index of legal) {
     const before = player.tokens[index].progress;
     const result = moveToken(players, playerIndex, index, dice);
+    if (result.players === players) continue;
+
     const after = result.players[playerIndex].tokens[index].progress;
-    let score = after * 4;
-    if (before === -1) score += 650;
-    if (after === 56) score += 10000;
-    else if (after > 50 && before <= 50) score += 900;
-    if (result.captured) score += result.captured * 1800;
+    let score = Math.max(0, after) * 5;
+
+    // Prioritise getting tokens into play, finishing, and capturing opponents.
+    if (before === -1) score += 700;
+    if (after === 56) score += 12000;
+    else if (after > 50 && before <= 50) score += 1100;
+    score += result.captured * 2200;
 
     if (after >= 0 && after <= 50) {
-      const [x, y] = ROUTES[player.color][after];
-      const threatened = result.players.some((op, opponentIndex) =>
-        opponentIndex !== playerIndex && op.tokens.some(other => {
-          if (other.progress < 0 || other.progress > 50) return false;
-          const [ox, oy] = ROUTES[op.color][other.progress];
-          return ox === x && oy === y;
-        })
+      const absolute = (START[player.color] + after) % TRACK.length;
+      if (SAFE.has(absolute)) score += 260;
+
+      const hasFriendlyToken = result.players[playerIndex].tokens.some((token, otherIndex) =>
+        otherIndex !== index && token.progress >= 0 && token.progress <= 50 &&
+        (START[player.color] + token.progress) % TRACK.length === absolute
       );
-      if (threatened) score -= 700;
+      if (hasFriendlyToken) score += 380;
+
+      if (isThreatened(result.players, playerIndex, player.color, after)) score -= 1900;
+    }
+
+    // Prefer moving a token away from an exposed square when another move is otherwise comparable.
+    if (before >= 0 && before <= 50 && isThreatened(players, playerIndex, player.color, before)) {
+      score += 220;
     }
 
     if (score > bestScore) {
