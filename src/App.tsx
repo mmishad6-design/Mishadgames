@@ -57,7 +57,7 @@ export default function App(){
   const rolled=Math.floor(Math.random()*6)+1;
   rollTimer.current=window.setTimeout(()=>{
    setBusy(false);
-   const legal=legalTokens(current,rolled);
+   const legal=legalTokens(current,rolled,players);
    if(legal.length===0){
     setDice(null);setChoices([]);
     if(rolled===6){setMessage("Six! No token can move. Roll again.");}
