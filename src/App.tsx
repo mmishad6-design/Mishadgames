@@ -33,7 +33,7 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
   </g>)}
   {Object.entries(HOME_LANES).map(([color,cells])=>cells.map(([x,y],index)=><rect key={color+index} x={x*40} y={y*40} width="40" height="40" fill={PALETTE[color as Color]} stroke="#b8b9af" strokeWidth="1.2"/>))}
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
-  {COLORS.map(color=>{const base=BASES[color];const active=players[turn]?.color===color;const playerName=players.find(player=>player.color===color)?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;return <g key={color}>
+  {COLORS.map(color=>{const base=BASES[color];const playerName=players.find(player=>player.color===color)?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;return <g key={color}>
    <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={nameSize} fontWeight="500" letterSpacing="0" fill="#fff">{playerName}</text>
 
   </g>})}
