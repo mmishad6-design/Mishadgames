@@ -35,25 +35,7 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
   {COLORS.map(color=>{const base=BASES[color];const active=players[turn]?.color===color;const playerName=players.find(player=>player.color===color)?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;return <g key={color}>
    <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={nameSize} fontWeight="500" letterSpacing="0" fill="#fff">{playerName}</text>
-   {active&&<g
-    className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
-    transform={`translate(${base.x*40+120},${base.y*40+120})`}
-    role={canRoll?"button":undefined}
-    tabIndex={canRoll?0:undefined}
-    aria-label={canRoll?"Click to roll dice":dice===null?"Waiting for dice roll":"Dice shows "+dice}
-    onClick={canRoll?onRoll:undefined}
-    onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}
-   >
-    <g filter="url(#homeDiceShadow)">
-     <rect x="-36" y="-36" width="72" height="72" rx="15" fill="url(#homeDiceFace)" stroke={canRoll?"#244a3e":"#887d69"} strokeWidth={canRoll?"2.8":"2"}/>
-     <rect x="-31.5" y="-31.5" width="63" height="63" rx="11.5" fill="none" stroke="#ffffff" strokeOpacity=".82" strokeWidth="1.4"/>
-     <path d="M-22 -27 Q0 -33 22 -27" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity=".9"/>
-    </g>
-    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fontWeight="800" fill="#244a3e">…</text>:(DICE_DOTS[dice??5]).map(([dx,dy],dot)=><g key={dot}>
-     <circle cx={dx} cy={dy} r="7.5" fill="url(#homeDicePip)"/>
-     <ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".22"/>
-    </g>)}
-   </g>}
+
   </g>})}
   {pieces.map(piece=>{
    const [x,y]=piece.pos;
@@ -66,6 +48,20 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
     {selectable&&<circle r="18" fill="none" stroke="#bd9654" strokeWidth="2" strokeDasharray="3 3"/>}
    </g>;
   })}
+  {(()=>{const color=players[turn]?.color;if(!color)return null;const base=BASES[color];return <g
+   className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
+   transform={`translate(${base.x*40+120},${base.y*40+120})`}
+   role={canRoll?"button":undefined} tabIndex={canRoll?0:undefined}
+   aria-label={canRoll?"Click to roll dice":dice===null?"Waiting for dice roll":"Dice shows "+dice}
+   onClick={canRoll?onRoll:undefined}
+   onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}>
+   <g filter="url(#homeDiceShadow)">
+    <rect x="-36" y="-36" width="72" height="72" rx="15" fill="url(#homeDiceFace)" stroke={canRoll?"#244a3e":"#887d69"} strokeWidth={canRoll?"2.8":"2"}/>
+    <rect x="-31.5" y="-31.5" width="63" height="63" rx="11.5" fill="none" stroke="#ffffff" strokeOpacity=".82" strokeWidth="1.4"/>
+    <path d="M-22 -27 Q0 -33 22 -27" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity=".9"/>
+   </g>
+   {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fontWeight="800" fill="#244a3e">…</text>:(DICE_DOTS[dice??5]).map(([dx,dy],dot)=><g key={dot}><circle cx={dx} cy={dy} r="7.5" fill="url(#homeDicePip)"/><ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".22"/></g>)}
+  </g>;})()}
  </svg>;
 }
 function OnlinePanel({name,setName,code,setCode,activeCode,players,onlineIndex,onlinePlayers,presenceReady,error,busy,onCreate,onJoin,onStart,onBack}:{name:string;setName:(v:string)=>void;code:string;setCode:(v:string)=>void;activeCode:string|null;players:Player[];onlineIndex:number;onlinePlayers:number[];presenceReady:boolean;error:string;busy:boolean;onCreate:()=>void;onJoin:()=>void;onStart:()=>void;onBack:()=>void}){
