@@ -7,10 +7,10 @@ function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
  const colors:Color[]=count===2?["red","yellow"]:count===3?["red","green","yellow"]:COLORS;
  return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":(names[index]?.trim()||"Player "+(index+1)),ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
 }
-const DICE_DOTS:Record<number,[number,number][]>={
-  1:[[0,0]],2:[[-8,-8],[8,8]],3:[[-8,-8],[0,0],[8,8]],
-  4:[[-8,-8],[8,-8],[-8,8],[8,8]],5:[[-8,-8],[8,-8],[0,0],[-8,8],[8,8]],
-  6:[[-8,-8],[8,-8],[-8,0],[8,0],[-8,8],[8,8]]
+const DICE_DOTS:Record<number,[number,number][]> = {
+  1:[[0,0]],2:[[-11,-11],[11,11]],3:[[-11,-11],[0,0],[11,11]],
+  4:[[-11,-11],[11,-11],[-11,11],[11,11]],5:[[-11,-11],[11,-11],[0,0],[-11,11],[11,11]],
+  6:[[-11,-11],[11,-11],[-11,0],[11,0],[-11,11],[11,11]]
 };
 function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void}){
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:tokenPosition(player.color,token,tokenIndex)})));
@@ -28,8 +28,8 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
   </g>)}
   {Object.entries(HOME_LANES).map(([color,cells])=>cells.map(([x,y],index)=><rect key={color+index} x={x*40} y={y*40} width="40" height="40" fill={PALETTE[color as Color]} stroke="#b8b9af" strokeWidth="1.2"/>))}
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
-  {COLORS.map(color=>{const base=BASES[color];const active=players[turn]?.color===color;return <g key={color}>
-   <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontSize="7.2" fontWeight="700" letterSpacing=".35" textLength="148" lengthAdjust="spacingAndGlyphs" fill="#fff">{players.find(player=>player.color===color)?.name||COLOR_NAMES[color].toUpperCase()}</text>
+  {COLORS.map(color=>{const base=BASES[color];const active=players[turn]?.color===color;const playerName=players.find(player=>player.color===color)?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;return <g key={color}>
+   <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={nameSize} fontWeight="500" letterSpacing="0" fill="#fff">{playerName}</text>
    {active&&<g
     className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
     transform={`translate(${base.x*40+120},${base.y*40+120})`}
@@ -39,8 +39,8 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
     onClick={canRoll?onRoll:undefined}
     onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}
    >
-    <rect x="-17" y="-17" width="34" height="34" rx="7" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"2":"1.5"}/>
-    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="20" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="20" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="2.8" fill="#244a3e"/>)}
+    <rect x="-24" y="-24" width="48" height="48" rx="9" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"2.4":"1.8"}/>
+    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="25" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="25" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="3.7" fill="#244a3e"/>)}
    </g>}
   </g>})}
   {pieces.map(piece=>{
