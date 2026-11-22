@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from "react";
 import {BASES,BASE_SPOTS,COLORS,COLOR_NAMES,HOME_LANES,PALETTE,SAFE,START,TRACK,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
 type Mode="local"|"ai";
+type MatchRecord={id:number;date:string;mode:Mode;players:string[];winner:string};
 function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
  const colors:Color[]=count===2?["red","yellow"]:count===3?["red","green","yellow"]:COLORS;
  return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":(names[index]?.trim()||"Player "+(index+1)),ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
@@ -44,6 +45,9 @@ function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choic
 export default function App(){
  const [mode,setMode]=useState<Mode>("local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
  const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
+ const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
+  try{return JSON.parse(localStorage.getItem("mishads-ludo-history")||"[]") as MatchRecord[];}catch{return [];}
+ });
  const [dice,setDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[message,setMessage]=useState("Roll the dice to begin.");
  const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
  const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined);
@@ -98,7 +102,9 @@ export default function App(){
   playSound(result.captured>0?"capture":"move");
   if(winner(result.players[turn])){
    playSound("win");
-   clearTimers();setChampion(current.name);setMessage(current.name+" wins the game!");setDice(null);setChoices([]);return;
+   clearTimers();setChampion(current.name);setMessage(current.name+" wins the game!");setDice(null);setChoices([]);
+   setMatchHistory(history=>[{id:Date.now(),date:new Date().toISOString(),mode,players:result.players.map(player=>player.name),winner:current.name},...history].slice(0,50));
+   return;
   }
   if(rolled===6||result.captured>0){
    setDice(null);setChoices([]);
@@ -116,6 +122,12 @@ export default function App(){
   return()=>{if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current)};
  },[started,current?.ai,turn,dice,choices,busy,champion,passPending,players]);
  useEffect(()=>()=>clearTimers(),[]);
+ useEffect(()=>{try{localStorage.setItem("mishads-ludo-history",JSON.stringify(matchHistory));}catch{/* History remains available for this session if storage is unavailable. */}},[matchHistory]);
+ const playerStats=matchHistory.reduce<Record<string,{played:number;won:number}>>((stats,match)=>{
+  for(const name of match.players){stats[name]??={played:0,won:0};stats[name].played+=1;if(name===match.winner)stats[name].won+=1;}
+  return stats;
+ },{});
+ const rankedStats=Object.entries(playerStats).sort((a,b)=>b[1].won-a[1].won||b[1].played-a[1].played);
  const currentColor=current?PALETTE[current.color]:"#fff";
  return <main className="app-shell">
   <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><span className="edition">A MISHAD ORIGINAL</span></header>
@@ -131,6 +143,11 @@ export default function App(){
     <label className="field-label name-field-label">PLAYER NAMES</label><div className="name-fields">{Array.from({length:count},(_,index)=><label className="name-field" key={index}><span>{mode==="ai"&&index>0?"COMPUTER": "PLAYER "+(index+1)}</span><input value={mode==="ai"&&index>0?"Computer":playerNames[index]} disabled={mode==="ai"&&index>0} maxLength={20} onChange={event=>setPlayerNames(values=>values.map((name,i)=>i===index?event.target.value:name))} placeholder={"Player "+(index+1)}/></label>)}</div>
     <button className="primary-btn" onClick={resetGame}>START NEW GAME <span>→</span></button><p className="footnote">Free to play · No account needed · Made by Mishad</p>
    </div>
+   {matchHistory.length>0&&<section className="history-panel"><div className="history-heading"><div><span className="step">YOUR LOCAL RECORD</span><h2>Match History &amp; Statistics</h2></div><span className="history-total">{matchHistory.length} MATCHES</span></div>
+    <div className="history-stats"><div><strong>{matchHistory.length}</strong><span>Matches played</span></div><div><strong>{matchHistory.filter(match=>match.mode==="local").length}</strong><span>Local matches</span></div><div><strong>{matchHistory.filter(match=>match.mode==="ai").length}</strong><span>Vs AI matches</span></div></div>
+    <div className="history-columns"><div className="history-block"><h3>Player Statistics</h3>{rankedStats.map(([name,stat])=><div className="history-player" key={name}><span>{name}</span><small>{stat.won} wins · {stat.played} played</small><b>{stat.played?Math.round(stat.won/stat.played*100):0}%</b></div>)}</div>
+     <div className="history-block"><h3>Recent Matches</h3>{matchHistory.slice(0,8).map(match=><div className="history-match" key={match.id}><div><b>{match.winner} won</b><small>{new Date(match.date).toLocaleDateString()} · {match.mode==="ai"?"Vs AI":"Local"} · {match.players.length} players</small></div><span>✓</span></div>)}</div></div>
+   </section>}
   </section>:<section className="play-wrap">
    {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={resetGame}>PLAY AGAIN <span>↻</span></button></div></div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div><button className="back-btn" onClick={resetGame}>↻ Restart</button></div>
