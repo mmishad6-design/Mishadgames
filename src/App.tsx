@@ -170,7 +170,18 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
    if(!signal||signal.from===playerIndex||!Number.isInteger(signal.from)||signal.from<0||signal.from>3)return;
    if(signal.to!==-1&&signal.to!==playerIndex)return;
    if(signal.kind==="hello"){
-    if(activeRef.current)sendSignal({from:playerIndex,to:signal.from,kind:"ready"});
+    if(activeRef.current){
+     sendSignal({from:playerIndex,to:signal.from,kind:"ready"});
+     if(playerIndex<signal.from){
+      try{
+       const peer=makePeer(signal.from);
+       if(peer.signalingState==="stable"){
+        const offer=await peer.createOffer();await peer.setLocalDescription(offer);
+        sendSignal({from:playerIndex,to:signal.from,kind:"offer",data:peer.localDescription});
+       }
+      }catch{setError("Could not start the voice connection. Please try Talk again.");}
+     }
+    }
     return;
    }
    if(signal.kind==="ready"){
