@@ -50,10 +50,14 @@ function OnlinePanel({name,setName,code,setCode,activeCode,players,onlineIndex,e
  {error&&<p className="online-error" role="alert">{error}</p>}<p className="footnote">Room codes are random 6-digit numbers. Share yours only with friends.</p></div>;
 }
 function getOnlineToken(){let token=localStorage.getItem("mishads-ludo-player-token");if(!token){token=crypto.randomUUID();localStorage.setItem("mishads-ludo-player-token",token);}return token;}
+function getSavedOnlineSession():{roomCode:string;playerIndex:number;name:string}|null{
+ try{const raw=localStorage.getItem("mishads-ludo-online-session");if(!raw)return null;const value=JSON.parse(raw);if(typeof value.roomCode==="string"&&/^\\d{6}$/.test(value.roomCode)&&Number.isInteger(value.playerIndex)&&value.playerIndex>=0&&value.playerIndex<4)return {roomCode:value.roomCode,playerIndex:value.playerIndex,name:typeof value.name==="string"?value.name:""};}catch{/* Ignore invalid saved room data. */}
+ return null;
+}
 
 export default function App(){
- const [mode,setMode]=useState<Mode>("local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
- const [onlineName,setOnlineName]=useState(""),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(null),[onlineIndex,setOnlineIndex]=useState(0),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false);
+ const [mode,setMode]=useState<Mode>(()=>getSavedOnlineSession()?"online":"local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
+ const [onlineName,setOnlineName]=useState(()=>getSavedOnlineSession()?.name||""),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(()=>getSavedOnlineSession()?.roomCode||null),[onlineIndex,setOnlineIndex]=useState(()=>getSavedOnlineSession()?.playerIndex||0),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false),[reconnectKey,setReconnectKey]=useState(0);
  const [theme,setTheme]=useState<"light"|"dark">(()=>{try{return localStorage.getItem("mishads-ludo-theme")==="dark"?"dark":"light";}catch{return "light";}});
  const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
  const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
@@ -84,12 +88,12 @@ export default function App(){
  const current=players[turn];
  const applyOnlineState=(state:any)=>{if(!state)return;const nextPlayers=state.players||[];const nextTurn=Number(state.turn||0);const nextDice=state.dice??null;setPlayers(nextPlayers);setTurn(nextTurn);setDice(nextDice);setChoices(state.choices?.length?state.choices:(nextDice!==null&&nextPlayers[nextTurn]?legalTokens(nextPlayers[nextTurn],Number(nextDice),nextPlayers):[]));setMessage(state.message||"Online match");setChampion(state.champion??null);setStarted(!!state.started);setBusy(false);setPassPending(false);};
  const syncOnlineState=async(state:any)=>{if(mode!=="online"||!activeRoomCode)return;const {error}=await supabase.rpc("ludo_update_state",{p_code:activeRoomCode,p_token:getOnlineToken(),p_state:state});if(error){setOnlineError(error.message);return;}applyOnlineState(state);};
- const createOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_create_room",{p_name:onlineName.trim(),p_token:getOnlineToken()});if(error)throw error;const row=Array.isArray(data)?data[0]:data;setActiveRoomCode(row.room_code);setOnlineIndex(0);applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not create room");}finally{setOnlineBusy(false);}};
- const joinOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_join_room",{p_code:joinCode,p_name:onlineName.trim(),p_token:getOnlineToken()});if(error)throw error;const row=Array.isArray(data)?data[0]:data;setActiveRoomCode(row.room_code);setOnlineIndex(row.your_index);applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not join room");}finally{setOnlineBusy(false);}};
+ const createOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_create_room",{p_name:onlineName.trim(),p_token:getOnlineToken()});if(error)throw error;const row=Array.isArray(data)?data[0]:data;setActiveRoomCode(row.room_code);setOnlineIndex(0);localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:row.room_code,playerIndex:0,name:onlineName.trim()}));applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not create room");}finally{setOnlineBusy(false);}};
+ const joinOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_join_room",{p_code:joinCode,p_name:onlineName.trim(),p_token:getOnlineToken()});if(error)throw error;const row=Array.isArray(data)?data[0]:data;setActiveRoomCode(row.room_code);setOnlineIndex(row.your_index);localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:row.room_code,playerIndex:row.your_index,name:onlineName.trim()}));applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not join room");}finally{setOnlineBusy(false);}};
  const startOnlineRoom=async()=>{if(!activeRoomCode)return;setOnlineBusy(true);setOnlineError("");const {data,error}=await supabase.rpc("ludo_start_room",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error)setOnlineError(error.message);else applyOnlineState(data);setOnlineBusy(false);};
  const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
  const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
- const backToSetup=()=>{clearTimers();if(mode==="online"){setMode("local");setActiveRoomCode(null);setOnlineError("");}setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
+ const backToSetup=()=>{clearTimers();if(mode==="online"){setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");}setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
  const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
  const rollDice=async()=>{
   if(!started||!current||dice!==null||busy||champion||passPending)return;
@@ -157,7 +161,7 @@ export default function App(){
    const row=Array.isArray(data)?data[0]:data;
    if(row?.room_state)applyOnlineState(row.room_state);
   };
-  const channel=supabase.channel("ludo-room-"+activeRoomCode)
+  const channel=supabase.channel("ludo-room-"+activeRoomCode+"-"+reconnectKey)
    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"ludo_rooms",filter:"code=eq."+activeRoomCode},payload=>{
     if(!cancelled)applyOnlineState((payload.new as any).state);
    })
@@ -168,6 +172,14 @@ export default function App(){
     }
    });
   return()=>{cancelled=true;void supabase.removeChannel(channel);};
+ },[activeRoomCode,mode,reconnectKey]);
+ useEffect(()=>{
+  if(!activeRoomCode||mode!=="online")return;
+  const reconnect=()=>{if(document.visibilityState==="visible"&&navigator.onLine){setOnlineError("");setReconnectKey(value=>value+1);}};
+  window.addEventListener("online",reconnect);
+  window.addEventListener("pageshow",reconnect);
+  document.addEventListener("visibilitychange",reconnect);
+  return()=>{window.removeEventListener("online",reconnect);window.removeEventListener("pageshow",reconnect);document.removeEventListener("visibilitychange",reconnect);};
  },[activeRoomCode,mode]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-history",JSON.stringify(matchHistory));}catch{/* History remains available for this session if storage is unavailable. */}},[matchHistory]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-theme",theme);}catch{/* Theme remains available for this session if storage is unavailable. */}},[theme]);
@@ -183,7 +195,7 @@ export default function App(){
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
    
    <div className="setup-card"><span className="step">01 / GAME SETUP</span><h2>Choose how you want to play</h2>
-    {mode==="online"?<OnlinePanel name={onlineName} setName={setOnlineName} code={joinCode} setCode={setJoinCode} activeCode={activeRoomCode} players={players} onlineIndex={onlineIndex} error={onlineError} busy={onlineBusy} onCreate={createOnlineRoom} onJoin={joinOnlineRoom} onStart={startOnlineRoom} onBack={()=>{setMode("local");setActiveRoomCode(null);setOnlineError("");}}/>:<>
+    {mode==="online"?<OnlinePanel name={onlineName} setName={setOnlineName} code={joinCode} setCode={setJoinCode} activeCode={activeRoomCode} players={players} onlineIndex={onlineIndex} error={onlineError} busy={onlineBusy} onCreate={createOnlineRoom} onJoin={joinOnlineRoom} onStart={startOnlineRoom} onBack={()=>{setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");}}/>:<>
     <div className="mode-grid">
      <button className={"mode-card "+(mode==="local"?"selected":"")} onClick={()=>setMode("local")}><span className="mode-icon">♟</span><span><b>Local Player</b><small>Pass one device between players</small></span></button>
      <button className={"mode-card "+(mode==="ai"?"selected":"")} onClick={()=>setMode("ai")}><span className="mode-icon">✦</span><span><b>AI Player</b><small>Play against computer opponents</small></span></button>
