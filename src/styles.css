@@ -9,3 +9,11 @@
 .score-row.is-turn{animation:turnPulse 1.8s ease-in-out infinite}
 @keyframes turnPulse{0%,100%{box-shadow:inset 0 0 0 0 #b59a6300}50%{box-shadow:inset 0 0 0 2px #b59a6360}}
 @media(prefers-reduced-motion:reduce){.token-piece,.score-row.is-turn,.token-selectable,.dice-face.rolling{animation:none;transition:none}}
+
+
+/* Winner celebration */
+.winner-celebration{position:relative;isolation:isolate;overflow:hidden;margin:0 0 16px;padding:23px 18px;border:1px solid #cdb477;border-radius:13px;background:radial-gradient(ellipse at 50% 0%,#416b55 0,#1c3935 65%,#172c2d 100%);box-shadow:0 12px 30px #0004;text-align:center;animation:winnerEnter .45s cubic-bezier(.2,.8,.2,1) both}
+.winner-content{position:relative;z-index:2}.winner-kicker{display:block;color:#e4c987;font-size:9px;font-weight:800;letter-spacing:2.6px}.winner-content strong{display:block;margin:7px 0 3px;color:#fff4d8;font:600 clamp(26px,5vw,38px) "Playfair Display",serif}.winner-content p{margin:0;color:#c5d4c8;font-size:11px}.winner-replay{margin-top:13px;padding:10px 17px;border:1px solid #dfc88f;border-radius:6px;background:#d9bd7e;color:#203a31;font-size:10px;font-weight:800;letter-spacing:1px}.winner-replay span{margin-left:7px}.winner-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}.winner-confetti i{position:absolute;top:-12px;left:calc((var(--piece) * 5.7%) + 1%);width:6px;height:11px;border-radius:2px;background:hsl(calc(var(--piece) * 37),55%,72%);transform:rotate(calc(var(--piece) * 29deg));animation:confettiFall 2.2s ease-in calc(var(--piece) * 55ms) both}.winner-confetti i:nth-child(3n){width:8px;height:8px;border-radius:50%}.winner-confetti i:nth-child(4n){background:#e9d59d}
+@keyframes winnerEnter{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes confettiFall{0%{transform:translateY(-12px) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translateY(190px) rotate(540deg);opacity:0}}
+@media(prefers-reduced-motion:reduce){.winner-celebration,.winner-confetti i{animation:none}}
