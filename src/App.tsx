@@ -39,8 +39,8 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
     onClick={canRoll?onRoll:undefined}
     onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}
    >
-    <rect x="-24" y="-24" width="48" height="48" rx="9" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"2.4":"1.8"}/>
-    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="25" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="25" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="3.7" fill="#244a3e"/>)}
+    <rect x="-30" y="-30" width="60" height="60" rx="11" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"2.4":"1.8"}/>
+    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="31" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="31" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="5.2" fill="#244a3e"/>)}
    </g>}
   </g>})}
   {pieces.map(piece=>{
