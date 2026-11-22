@@ -109,3 +109,21 @@
 
 
 .room-communication{width:100%;max-width:720px;margin:0 auto 16px}\n
+/* Player-name labels and active-player dice placement */
+.board-svg text{paint-order:stroke;stroke:#0002;stroke-width:.35px}
+.score-row .dice-face{width:42px;height:42px;min-width:42px;margin:0;padding:6px;border-radius:9px;box-shadow:0 2px 6px #473a2218}
+.score-row .pip{width:6px;height:6px}
+.score-row .dice-ready{font-size:22px}
+.score-row .dice-rolling{font-size:18px}
+@media(max-width:760px){.score-row .dice-face{width:38px;height:38px;min-width:38px;padding:5px}.score-row .pip{width:5px;height:5px}.score-row .dice-ready{font-size:20px}}
+.reset-request{margin:0 0 14px;padding:13px 15px;border:1px solid #c9ad73;border-radius:10px;background:#f4eddd;color:#34483d}
+.reset-request>b{font-size:12px;letter-spacing:.2px}
+.reset-request p{margin:5px 0 0;font-size:11px;line-height:1.5}
+.reset-actions{display:flex;gap:8px;margin-top:10px}
+.reset-actions button{flex:1;border:1px solid #b99a60;border-radius:7px;padding:10px;background:#204b41;color:#fff8e9;font-size:10px;font-weight:800;letter-spacing:.6px}
+.reset-actions button+button{background:transparent;color:#8c5b4e;border-color:#cda69b}
+.reset-actions button:disabled{opacity:.5}
+.app-shell[data-theme="dark"] .reset-request{background:#26383a;color:#f0eadb;border-color:#8c784f}
+.app-shell[data-theme="dark"] .reset-actions button{background:#d8c18d;color:#203a31;border-color:#d8c18d}
+.app-shell[data-theme="dark"] .reset-actions button+button{background:transparent;color:#f0b1a5;border-color:#8d625a}
+@media(max-width:430px){.score-row{gap:6px;padding:8px}.score-row .dice-face{width:34px;height:34px;min-width:34px}.score-row .presence-status{font-size:8px}}
