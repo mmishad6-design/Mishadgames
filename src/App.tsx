@@ -201,7 +201,7 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
    }catch{setError("Voice connection failed. Text chat is still available.");}
   };
   channel.on("broadcast",{event:"voice-signal"},handleSignal);
-  return()=>{peersRef.current.forEach(peer=>peer.close());peersRef.current.clear();streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;activeRef.current=false;};
+  return()=>{};
  },[channel,playerIndex]);
  useEffect(()=>{
   if(active&&channel)sendSignal({from:playerIndex,to:-1,kind:"hello"});
