@@ -128,7 +128,7 @@ export default function App(){
  });
  const [dice,setDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[message,setMessage]=useState("Roll the dice to begin.");
  const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
- const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined);
+ const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined),autoMoveTimer=useRef<number|undefined>(undefined);
  const audioContext=useRef<AudioContext|null>(null);
  const playSound=(kind:"roll"|"move"|"capture"|"win")=>{
   if(!soundEnabled||typeof window==="undefined")return;
@@ -175,7 +175,7 @@ export default function App(){
   return()=>window.clearTimeout(timer);
  },[resetRequest?.id,resetRequest?.status]);
 
- const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
+ const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);if(autoMoveTimer.current!==undefined)window.clearTimeout(autoMoveTimer.current);};
  const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
  const exitOnlineRoom=async()=>{
   if(activeRoomCode&&roomChannelRef.current){
@@ -193,7 +193,7 @@ export default function App(){
  const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
  const rollDice=async()=>{
   if(!started||!current||dice!==null||busy||champion||passPending||resetRequest?.status==="pending")return;
-  if(mode==="online"){setBusy(true);const {data,error}=await supabase.rpc("ludo_roll_dice",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error){setOnlineError(error.message);setBusy(false);return;}const rolled=Number(data);const legal=legalTokens(current,rolled,players);setBusy(false);if(!legal.length){if(rolled===6){void syncOnlineState({players,turn,dice:null,choices:[],message:"Six! No token can move. Roll again.",champion:null,started:true});}else{setPassPending(true);void syncOnlineState({players,turn:(turn+1)%players.length,dice:null,choices:[],message:"No legal move. Turn passes.",champion:null,started:true});}return;}setDice(rolled);setChoices(legal);setMessage(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.");return;}
+  if(mode==="online"){setBusy(true);const {data,error}=await supabase.rpc("ludo_roll_dice",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error){setOnlineError(error.message);setBusy(false);return;}const rolled=Number(data);const legal=legalTokens(current,rolled,players);setBusy(false);if(!legal.length){if(rolled===6){void syncOnlineState({players,turn,dice:null,choices:[],message:"Six! No token can move. Roll again.",champion:null,started:true});}else{setPassPending(true);void syncOnlineState({players,turn:(turn+1)%players.length,dice:null,choices:[],message:"No legal move. Turn passes.",champion:null,started:true});}return;}setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)autoMoveTimer.current=window.setTimeout(()=>moveSelected(autoIndex),700);return;}
   setBusy(true);
   playSound("roll");
   // Use an unbiased cryptographic roll: reject the four excess uint32 values
@@ -215,7 +215,7 @@ export default function App(){
     else{setMessage("No legal move. Turn passes to the next player.");setPassPending(true);passTimer.current=window.setTimeout(()=>nextTurn(),1100);}
     return;
    }
-   setDice(rolled);setChoices(legal);
+   setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)autoMoveTimer.current=window.setTimeout(()=>moveSelected(autoIndex),700);
    setMessage(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.");
   },450);
  };
