@@ -7,13 +7,12 @@ function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
  const colors:Color[]=count===2?["red","yellow"]:count===3?["red","green","yellow"]:COLORS;
  return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":(names[index]?.trim()||"Player "+(index+1)),ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
 }
-function Dice({value,rolling}:{value:number|null;rolling:boolean}){
- const faces:Record<number,number[]>={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
- return <div className={"dice-face"+(rolling?" rolling":"")} aria-label={rolling?"Dice rolling":value? "Dice shows "+value:"Dice ready"}>
-  {rolling?<span className="dice-rolling">…</span>:value?Array.from({length:9},(_,i)=><i key={i} className={faces[value].includes(i)?"pip visible":"pip"}/>):<span className="dice-ready">⚄</span>}
- </div>;
-}
-function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choices:number[];onMove:(i:number)=>void}){
+const DICE_DOTS:Record<number,[number,number][]>={
+  1:[[0,0]],2:[[-8,-8],[8,8]],3:[[-8,-8],[0,0],[8,8]],
+  4:[[-8,-8],[8,-8],[-8,8],[8,8]],5:[[-8,-8],[8,-8],[0,0],[-8,8],[8,8]],
+  6:[[-8,-8],[8,-8],[-8,0],[8,0],[-8,8],[8,8]]
+};
+function Board({players,turn,choices,dice,rolling,onMove}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;onMove:(i:number)=>void}){
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:tokenPosition(player.color,token,tokenIndex)})));
  return <svg className="board-svg" viewBox="0 0 600 600" role="img" aria-label="Classic Ludo board">
   <rect width="600" height="600" fill="var(--board-surface)"/>
@@ -29,7 +28,13 @@ function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choic
   </g>)}
   {Object.entries(HOME_LANES).map(([color,cells])=>cells.map(([x,y],index)=><rect key={color+index} x={x*40} y={y*40} width="40" height="40" fill={PALETTE[color as Color]} stroke="#b8b9af" strokeWidth="1.2"/>))}
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
-  {COLORS.map(color=>{const base=BASES[color];return <text key={color} x={base.x*40+120} y={base.y*40+22} textAnchor="middle" fontSize="10" fontWeight="800" letterSpacing="1" textLength="190" lengthAdjust="spacingAndGlyphs" fill="#fff">{players.find(player=>player.color===color)?.name||COLOR_NAMES[color].toUpperCase()}</text>})}
+  {COLORS.map(color=>{const base=BASES[color];const active=players[turn]?.color===color;return <g key={color}>
+   <text x={base.x*40+120} y={base.y*40+22} textAnchor="middle" fontSize="10" fontWeight="800" letterSpacing="1" textLength="190" lengthAdjust="spacingAndGlyphs" fill="#fff">{players.find(player=>player.color===color)?.name||COLOR_NAMES[color].toUpperCase()}</text>
+   {active&&<g transform={`translate(${base.x*40+120},${base.y*40+220})`}>
+    <rect x="-17" y="-17" width="34" height="34" rx="7" fill="#fffdf7" stroke="#806d4d" strokeWidth="1.5"/>
+    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="20" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="20" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="2.8" fill="#244a3e"/>)}
+   </g>}
+  </g>})}
   {pieces.map(piece=>{
    const [x,y]=piece.pos;
    const stacked=pieces.filter(other=>other.pos[0]===x&&other.pos[1]===y);
@@ -309,12 +314,12 @@ export default function App(){
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
-   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(onlineIndex!==turn||resetRequest?.status==="pending")?[]:choices} onMove={moveSelected}/></div>
+   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(onlineIndex!==turn||resetRequest?.status==="pending")?[]:choices} dice={dice} rolling={busy} onMove={moveSelected}/></div>
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
      <div className="game-controls"><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      <button className="roll-btn" onClick={rollDice} disabled={dice!==null||busy||!!champion||passPending||!!current?.ai||resetRequest?.status==="pending"||(mode==="online"&&onlineIndex!==turn)}>{busy?"ROLLING…":passPending?"PASSING TURN":current?.ai?"COMPUTER PLAYING":"ROLL DICE"}</button>
      <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p></>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
-     <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{index===turn&&<Dice value={dice} rolling={busy}/>}{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
+     <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
      <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
      {champion&&mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
     </aside>
