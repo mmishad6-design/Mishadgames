@@ -47,8 +47,48 @@ function OnlinePanel({name,setName,code,setCode,activeCode,players,onlineIndex,o
  return <div className="online-card"><button className="back-btn online-back" onClick={onBack}>← Game modes</button><span className="step">ONLINE MULTIPLAYER</span><h2>{activeCode?"Your room is ready":"Play with friends online"}</h2>
  <label className="field-label">YOUR PLAYER NAME</label><input className="online-input" value={name} maxLength={20} onChange={e=>setName(e.target.value)} placeholder="Enter your name"/>
  {!activeCode?<><div className="online-actions"><button className="primary-btn" disabled={busy||!name.trim()} onClick={onCreate}>{busy?"CREATING…":"CREATE ROOM"}</button><div className="online-join"><label className="field-label">JOIN WITH ROOM CODE</label><input className="online-input room-code-input" value={code} maxLength={6} inputMode="numeric" onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="secondary-btn" disabled={busy||!name.trim()||code.length!==6} onClick={onJoin}>JOIN ROOM →</button></div></div></>:<><div className="room-code-display"><span>ROOM CODE</span><strong>{activeCode}</strong><button className="secondary-btn" onClick={()=>void navigator.clipboard?.writeText(activeCode)}>COPY CODE</button></div><div className="room-player-list"><b>PLAYERS IN ROOM</b>{players.map((p,i)=><div className="room-player" key={p.color}><i style={{background:PALETTE[p.color]}}/>{p.name}{i===onlineIndex?" (You)":""}{i===0?" · Host":""}<small className={"presence-status "+(onlinePlayers.includes(i)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(i)?"Connected":"Disconnected"):"Checking…"}</small></div>)}</div>{onlineIndex===0?<button className="primary-btn" disabled={players.length<2||busy} onClick={onStart}>{players.length<2?"WAITING FOR PLAYER…":"START ONLINE GAME →"}</button>:<p className="online-waiting">Waiting for the host to start the game…</p>}</>}
- {error&&<p className="online-error" role="alert">{error}</p>}<p className="footnote">Room codes are random 6-digit numbers. Share yours only with friends.</p></div>;
+ {error&&<p className="online-error" role="alert">{error}</p>}<p className="footnote">Room codes are random 6-digit numbers. Share yours only with friends.</p>{activeCode&&<RoomChat roomCode={activeCode} name={name} playerIndex={onlineIndex}/>}</div>;
 }
+
+type ChatMessage={id:number;player_index:number;player_name:string;message:string;created_at:string};
+function RoomChat({roomCode,name,playerIndex}:{roomCode:string;name:string;playerIndex:number}){
+ const [messages,setMessages]=useState<ChatMessage[]>([]);
+ const [draft,setDraft]=useState("");
+ const [open,setOpen]=useState(false);
+ const [sending,setSending]=useState(false);
+ const [error,setError]=useState("");
+ const refresh=async()=>{
+  const {data,error}=await supabase.rpc("ludo_chat_list",{p_code:roomCode,p_token:getOnlineToken()});
+  if(error){setError(error.message);return;}
+  setMessages((data||[]).slice().reverse() as ChatMessage[]);
+ };
+ useEffect(()=>{
+  void refresh();
+  const timer=window.setInterval(()=>void refresh(),2500);
+  return()=>window.clearInterval(timer);
+ },[roomCode]);
+ const send=async()=>{
+  const message=draft.trim();if(!message||sending)return;
+  setSending(true);setError("");
+  const {error}=await supabase.rpc("ludo_chat_send",{p_code:roomCode,p_token:getOnlineToken(),p_message:message});
+  if(error)setError(error.message);else{setDraft("");await refresh();}
+  setSending(false);
+ };
+ return <section className="room-chat">
+  <button type="button" className="chat-toggle" onClick={()=>setOpen(value=>!value)} aria-expanded={open}>
+   <span>ROOM CHAT</span><b>{open?"−":"＋"}</b>
+  </button>
+  {open&&<div className="chat-content">
+   <div className="chat-messages" aria-live="polite">{messages.length===0?<p className="chat-empty">No messages yet. Say hello! 👋</p>:messages.map(item=><div className={"chat-message "+(item.player_index===playerIndex?"mine":"")} key={item.id}>
+    <small>{item.player_index===playerIndex?"You":item.player_name}</small><p>{item.message}</p><time>{new Date(item.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</time>
+   </div>)}</div>
+   <div className="chat-compose"><input value={draft} maxLength={300} placeholder="Write a message…" onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")void send();}}/><button type="button" disabled={!draft.trim()||sending} onClick={()=>void send()}>{sending?"…":"SEND"}</button></div>
+   {error&&<p className="chat-error">{error}</p>}
+   <p className="chat-note">Temporary chat · Cleared when everyone leaves the room.</p>
+  </div>}
+ </section>;
+}
+
 function getOnlineToken(){let token=localStorage.getItem("mishads-ludo-player-token");if(!token){token=crypto.randomUUID();localStorage.setItem("mishads-ludo-player-token",token);}return token;}
 function getSavedOnlineSession():{roomCode:string;playerIndex:number;name:string}|null{
  try{const raw=localStorage.getItem("mishads-ludo-online-session");if(!raw)return null;const value=JSON.parse(raw);if(typeof value.roomCode==="string"&&/^\\d{6}$/.test(value.roomCode)&&Number.isInteger(value.playerIndex)&&value.playerIndex>=0&&value.playerIndex<4)return {roomCode:value.roomCode,playerIndex:value.playerIndex,name:typeof value.name==="string"?value.name:""};}catch{/* Ignore invalid saved room data. */}
@@ -93,7 +133,19 @@ export default function App(){
  const startOnlineRoom=async()=>{if(!activeRoomCode)return;setOnlineBusy(true);setOnlineError("");const {data,error}=await supabase.rpc("ludo_start_room",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error)setOnlineError(error.message);else applyOnlineState(data);setOnlineBusy(false);};
  const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
  const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
- const backToSetup=()=>{clearTimers();if(mode==="online"){setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");}setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
+ const exitOnlineRoom=async()=>{
+  if(activeRoomCode&&roomChannelRef.current){
+   const channel=roomChannelRef.current;
+   try{
+    await channel.untrack();
+    await new Promise(resolve=>window.setTimeout(resolve,250));
+    const remaining=Object.values(channel.presenceState() as Record<string,unknown[]>).flat().length;
+    if(remaining===0)await supabase.rpc("ludo_chat_clear",{p_code:activeRoomCode,p_token:getOnlineToken()});
+   }catch{/* Chat cleanup is best-effort if the connection is already gone. */}
+  }
+  setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");
+ };
+ const backToSetup=()=>{clearTimers();if(mode==="online")void exitOnlineRoom();setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
  const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
  const rollDice=async()=>{
   if(!started||!current||dice!==null||busy||champion||passPending)return;
@@ -163,7 +215,8 @@ export default function App(){
   };
   setPresenceReady(false);
   setOnlinePlayers([]);
-  const channel=supabase.channel("ludo-room-"+activeRoomCode+"-"+reconnectKey)
+  const channel=supabase.channel("ludo-room-"+activeRoomCode+"-"+reconnectKey);roomChannelRef.current=channel;
+  channel
    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"ludo_rooms",filter:"code=eq."+activeRoomCode},payload=>{
     if(!cancelled)applyOnlineState((payload.new as any).state);
    })
@@ -183,7 +236,7 @@ export default function App(){
      setOnlineError("Room connection interrupted. Reconnecting…");
     }
    });
-  return()=>{cancelled=true;void supabase.removeChannel(channel);};
+  return()=>{cancelled=true;if(roomChannelRef.current===channel)roomChannelRef.current=null;void supabase.removeChannel(channel);};
  },[activeRoomCode,mode,reconnectKey,onlineIndex,onlineName]);
  useEffect(()=>{
   if(!activeRoomCode||mode!=="online")return;
@@ -207,7 +260,7 @@ export default function App(){
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
    
    <div className="setup-card"><span className="step">01 / GAME SETUP</span><h2>Choose how you want to play</h2>
-    {mode==="online"?<OnlinePanel name={onlineName} setName={setOnlineName} code={joinCode} setCode={setJoinCode} activeCode={activeRoomCode} players={players} onlineIndex={onlineIndex} onlinePlayers={onlinePlayers} presenceReady={presenceReady} error={onlineError} busy={onlineBusy} onCreate={createOnlineRoom} onJoin={joinOnlineRoom} onStart={startOnlineRoom} onBack={()=>{setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");}}/>:<>
+    {mode==="online"?<OnlinePanel name={onlineName} setName={setOnlineName} code={joinCode} setCode={setJoinCode} activeCode={activeRoomCode} players={players} onlineIndex={onlineIndex} onlinePlayers={onlinePlayers} presenceReady={presenceReady} error={onlineError} busy={onlineBusy} onCreate={createOnlineRoom} onJoin={joinOnlineRoom} onStart={startOnlineRoom} onBack={()=>void exitOnlineRoom()}/>:<>
     <div className="mode-grid">
      <button className={"mode-card "+(mode==="local"?"selected":"")} onClick={()=>setMode("local")}><span className="mode-icon">♟</span><span><b>Local Player</b><small>Pass one device between players</small></span></button>
      <button className={"mode-card "+(mode==="ai"?"selected":"")} onClick={()=>setMode("ai")}><span className="mode-icon">✦</span><span><b>AI Player</b><small>Play against computer opponents</small></span></button>
@@ -231,7 +284,7 @@ export default function App(){
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
      <div className="game-controls"><Dice value={dice} rolling={busy}/><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      <button className="roll-btn" onClick={rollDice} disabled={dice!==null||busy||!!champion||passPending||!!current?.ai||(mode==="online"&&onlineIndex!==turn)}>{busy?"ROLLING…":passPending?"PASSING TURN":current?.ai?"COMPUTER PLAYING":"ROLL DICE"}</button>
-     <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
+     <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p>{activeRoomCode&&<RoomChat roomCode={activeRoomCode} name={onlineName} playerIndex={onlineIndex}/>}</>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
      <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
      <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
      {champion&&mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
