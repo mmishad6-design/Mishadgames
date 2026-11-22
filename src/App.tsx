@@ -29,7 +29,7 @@ function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choic
   </g>)}
   {Object.entries(HOME_LANES).map(([color,cells])=>cells.map(([x,y],index)=><rect key={color+index} x={x*40} y={y*40} width="40" height="40" fill={PALETTE[color as Color]} stroke="#b8b9af" strokeWidth="1.2"/>))}
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
-  {COLORS.map(color=>{const base=BASES[color];return <text key={color} x={base.x*40+120} y={base.y*40+22} textAnchor="middle" fontSize="10" fontWeight="800" letterSpacing="2" fill="#fff">{COLOR_NAMES[color].toUpperCase()}</text>})}
+  {COLORS.map(color=>{const base=BASES[color];return <text key={color} x={base.x*40+120} y={base.y*40+22} textAnchor="middle" fontSize="10" fontWeight="800" letterSpacing="1" textLength="190" lengthAdjust="spacingAndGlyphs" fill="#fff">{players.find(player=>player.color===color)?.name||COLOR_NAMES[color].toUpperCase()}</text>})}
   {pieces.map(piece=>{
    const [x,y]=piece.pos;
    const stacked=pieces.filter(other=>other.pos[0]===x&&other.pos[1]===y);
@@ -91,13 +91,13 @@ function RoomChat({roomCode,playerIndex}:{roomCode:string;playerIndex:number}){
 
 function getOnlineToken(){let token=localStorage.getItem("mishads-ludo-player-token");if(!token){token=crypto.randomUUID();localStorage.setItem("mishads-ludo-player-token",token);}return token;}
 function getSavedOnlineSession():{roomCode:string;playerIndex:number;name:string}|null{
- try{const raw=localStorage.getItem("mishads-ludo-online-session");if(!raw)return null;const value=JSON.parse(raw);if(typeof value.roomCode==="string"&&/^\\d{6}$/.test(value.roomCode)&&Number.isInteger(value.playerIndex)&&value.playerIndex>=0&&value.playerIndex<4)return {roomCode:value.roomCode,playerIndex:value.playerIndex,name:typeof value.name==="string"?value.name:""};}catch{/* Ignore invalid saved room data. */}
+ try{const raw=localStorage.getItem("mishads-ludo-online-session");if(!raw)return null;const value=JSON.parse(raw);if(typeof value.roomCode==="string"&&/^\d{6}$/.test(value.roomCode)&&Number.isInteger(value.playerIndex)&&value.playerIndex>=0&&value.playerIndex<4)return {roomCode:value.roomCode,playerIndex:value.playerIndex,name:typeof value.name==="string"?value.name:""};}catch{/* Ignore invalid saved room data. */}
  return null;
 }
 
 export default function App(){
  const [mode,setMode]=useState<Mode>(()=>getSavedOnlineSession()?"online":"local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
- const [onlineName,setOnlineName]=useState(()=>getSavedOnlineSession()?.name||""),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(()=>getSavedOnlineSession()?.roomCode||null),[onlineIndex,setOnlineIndex]=useState(()=>getSavedOnlineSession()?.playerIndex||0),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false),[reconnectKey,setReconnectKey]=useState(0);const [onlinePlayers,setOnlinePlayers]=useState<number[]>([]),[presenceReady,setPresenceReady]=useState(false);const roomChannelRef=useRef<any>(null);
+ const [onlineName,setOnlineName]=useState(()=>getSavedOnlineSession()?.name||""),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(()=>getSavedOnlineSession()?.roomCode||null),[onlineIndex,setOnlineIndex]=useState(()=>getSavedOnlineSession()?.playerIndex||0),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false),[reconnectKey,setReconnectKey]=useState(0);const [onlinePlayers,setOnlinePlayers]=useState<number[]>([]),[presenceReady,setPresenceReady]=useState(false),[resetRequest,setResetRequest]=useState<any>(null);const roomChannelRef=useRef<any>(null);
  const [theme,setTheme]=useState<"light"|"dark">(()=>{try{return localStorage.getItem("mishads-ludo-theme")==="dark"?"dark":"light";}catch{return "light";}});
  const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
  const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
@@ -126,11 +126,32 @@ export default function App(){
   }catch{/* Audio is optional; gameplay must never depend on it. */}
  };
  const current=players[turn];
- const applyOnlineState=(state:any)=>{if(!state)return;const nextPlayers=state.players||[];const nextTurn=Number(state.turn||0);const nextDice=state.dice??null;setPlayers(nextPlayers);setTurn(nextTurn);setDice(nextDice);setChoices(state.choices?.length?state.choices:(nextDice!==null&&nextPlayers[nextTurn]?legalTokens(nextPlayers[nextTurn],Number(nextDice),nextPlayers):[]));setMessage(state.message||"Online match");setChampion(state.champion??null);setStarted(!!state.started);setBusy(false);setPassPending(false);};
+ const applyOnlineState=(state:any)=>{if(!state)return;const nextPlayers=state.players||[];const nextTurn=Number(state.turn||0);const nextDice=state.dice??null;setPlayers(nextPlayers);setTurn(nextTurn);setDice(nextDice);setChoices(state.choices?.length?state.choices:(nextDice!==null&&nextPlayers[nextTurn]?legalTokens(nextPlayers[nextTurn],Number(nextDice),nextPlayers):[]));setMessage(state.message||"Online match");setChampion(state.champion??null);setStarted(!!state.started);setResetRequest(state.resetRequest??null);setBusy(false);setPassPending(false);};
  const syncOnlineState=async(state:any)=>{if(mode!=="online"||!activeRoomCode)return;const {error}=await supabase.rpc("ludo_update_state",{p_code:activeRoomCode,p_token:getOnlineToken(),p_state:state});if(error){setOnlineError(error.message);return;}applyOnlineState(state);};
  const createOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_create_room",{p_name:onlineName.trim(),p_token:getOnlineToken()});if(error)throw error;const row=Array.isArray(data)?data[0]:data;setActiveRoomCode(row.room_code);setOnlineIndex(0);localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:row.room_code,playerIndex:0,name:onlineName.trim()}));applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not create room");}finally{setOnlineBusy(false);}};
  const joinOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_join_room",{p_code:joinCode,p_name:onlineName.trim(),p_token:getOnlineToken()});if(error)throw error;const row=Array.isArray(data)?data[0]:data;setActiveRoomCode(row.room_code);setOnlineIndex(row.your_index);localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:row.room_code,playerIndex:row.your_index,name:onlineName.trim()}));applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not join room");}finally{setOnlineBusy(false);}};
  const startOnlineRoom=async()=>{if(!activeRoomCode)return;setOnlineBusy(true);setOnlineError("");const {data,error}=await supabase.rpc("ludo_start_room",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error)setOnlineError(error.message);else applyOnlineState(data);setOnlineBusy(false);};
+ const requestOnlineReset=async()=>{
+  if(!activeRoomCode||onlineIndex!==0||resetRequest?.status==="pending"||onlineBusy)return;
+  setOnlineBusy(true);setOnlineError("");
+  const {data,error}=await supabase.rpc("ludo_request_reset",{p_code:activeRoomCode,p_token:getOnlineToken()});
+  if(error)setOnlineError(error.message);else applyOnlineState(data);
+  setOnlineBusy(false);
+ };
+ const respondOnlineReset=async(accept:boolean)=>{
+  if(!activeRoomCode||!resetRequest?.id||resetRequest.status!=="pending"||onlineBusy)return;
+  setOnlineBusy(true);setOnlineError("");
+  const {data,error}=await supabase.rpc("ludo_respond_reset",{p_code:activeRoomCode,p_token:getOnlineToken(),p_request_id:resetRequest.id,p_accept:accept});
+  if(error)setOnlineError(error.message);else applyOnlineState(data);
+  setOnlineBusy(false);
+ };
+ useEffect(()=>{
+  if(!resetRequest||resetRequest.status!=="pending")return;
+  const delay=Math.max(0,Number(resetRequest.expiresAt)-Date.now());
+  const timer=window.setTimeout(()=>setResetRequest((current:any)=>current?.id===resetRequest.id?{...current,status:"expired"}:current),delay);
+  return()=>window.clearTimeout(timer);
+ },[resetRequest?.id,resetRequest?.status]);
+
  const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
  const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
  const exitOnlineRoom=async()=>{
@@ -280,13 +301,20 @@ export default function App(){
 
   </section>:<section className="play-wrap">
    {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={resetGame} disabled={mode==="online"}>PLAY AGAIN <span>↻</span></button></div></div>}
-   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div><button className="back-btn" onClick={resetGame} disabled={mode==="online"}>↻ Restart</button></div>
+   {mode==="online"&&resetRequest&&<div className="reset-request" role="status">
+    {resetRequest.status==="pending"?<>
+     <b>Host requested a game reset</b>
+     <p>Approval: {(resetRequest.approvals||[]).length}/{resetRequest.required} players · Expires in 60 seconds.</p>
+     {onlineIndex!==0&&<div className="reset-actions"><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(true)}>ACCEPT RESET</button><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(false)}>DECLINE</button></div>}
+    </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
+   </div>}
+   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&onlineIndex!==turn?[]:choices} onMove={moveSelected}/></div>
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
-     <div className="game-controls"><Dice value={dice} rolling={busy}/><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
+     <div className="game-controls"><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      <button className="roll-btn" onClick={rollDice} disabled={dice!==null||busy||!!champion||passPending||!!current?.ai||(mode==="online"&&onlineIndex!==turn)}>{busy?"ROLLING…":passPending?"PASSING TURN":current?.ai?"COMPUTER PLAYING":"ROLL DICE"}</button>
      <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p></>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
-     <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
+     <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{index===turn&&<Dice value={dice} rolling={busy}/ >}{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
      <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
      {champion&&mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
     </aside>
