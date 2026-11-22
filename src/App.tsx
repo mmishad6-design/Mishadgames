@@ -79,7 +79,16 @@ export default function App(){
   if(!started||!current||dice!==null||busy||champion||passPending)return;
   setBusy(true);
   playSound("roll");
-  const rolled=Math.floor(Math.random()*6)+1;
+  // Use an unbiased cryptographic roll: reject the four excess uint32 values
+  // so every face has exactly the same probability.
+  const rollBuffer = new Uint32Array(1);
+  const rollLimit = 0x100000000 - (0x100000000 % 6);
+  let randomValue: number;
+  do {
+   window.crypto.getRandomValues(rollBuffer);
+   randomValue = rollBuffer[0];
+  } while (randomValue >= rollLimit);
+  const rolled = (randomValue % 6) + 1;
   rollTimer.current=window.setTimeout(()=>{
    setBusy(false);
    const legal=legalTokens(current,rolled,players);
