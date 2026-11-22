@@ -15,6 +15,11 @@ const DICE_DOTS:Record<number,[number,number][]> = {
 function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void}){
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:tokenPosition(player.color,token,tokenIndex)})));
  return <svg className="board-svg" viewBox="0 0 600 600" role="img" aria-label="Classic Ludo board">
+  <defs>
+   <linearGradient id="homeDiceFace" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0" stopColor="#ffffff"/><stop offset=".58" stopColor="#fffefa"/><stop offset="1" stopColor="#e9e4d8"/></linearGradient>
+   <radialGradient id="homeDicePip" cx="28%" cy="24%" r="78%"><stop offset="0" stopColor="#49665b"/><stop offset=".42" stopColor="#244a3e"/><stop offset="1" stopColor="#102c23"/></radialGradient>
+   <filter id="homeDiceShadow" x="-25%" y="-25%" width="150%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/><feOffset dy="2.5"/><feComponentTransfer><feFuncA type="linear" slope=".25"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
   <rect width="600" height="600" fill="var(--board-surface)"/>
   {COLORS.map(color=>{const base=BASES[color];return <g key={color}>
    <rect x={base.x*40} y={base.y*40} width="240" height="240" fill={PALETTE[color]} stroke="#283b36" strokeWidth="2"/>
@@ -39,8 +44,15 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
     onClick={canRoll?onRoll:undefined}
     onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}
    >
-    <rect x="-36" y="-36" width="72" height="72" rx="13" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"3":"2.2"}/>
-    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="7.2" fill="#244a3e"/>)}
+    <g filter="url(#homeDiceShadow)">
+     <rect x="-36" y="-36" width="72" height="72" rx="15" fill="url(#homeDiceFace)" stroke={canRoll?"#244a3e":"#887d69"} strokeWidth={canRoll?"2.8":"2"}/>
+     <rect x="-31.5" y="-31.5" width="63" height="63" rx="11.5" fill="none" stroke="#ffffff" strokeOpacity=".82" strokeWidth="1.4"/>
+     <path d="M-22 -27 Q0 -33 22 -27" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity=".9"/>
+    </g>
+    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fontWeight="800" fill="#244a3e">…</text>:(DICE_DOTS[dice??5]).map(([dx,dy],dot)=><g key={dot}>
+     <circle cx={dx} cy={dy} r="7.5" fill="url(#homeDicePip)"/>
+     <ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".22"/>
+    </g>)}
    </g>}
   </g>})}
   {pieces.map(piece=>{
