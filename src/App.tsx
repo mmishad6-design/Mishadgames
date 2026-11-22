@@ -147,7 +147,28 @@ export default function App(){
   return()=>{if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current)};
  },[started,current?.ai,turn,dice,choices,busy,champion,passPending,players]);
  useEffect(()=>()=>clearTimers(),[]);
- useEffect(()=>{if(!activeRoomCode)return;const channel=supabase.channel("ludo-room-"+activeRoomCode).on("postgres_changes",{event:"UPDATE",schema:"public",table:"ludo_rooms",filter:"code=eq."+activeRoomCode},payload=>applyOnlineState((payload.new as any).state)).subscribe();return()=>{void supabase.removeChannel(channel);};},[activeRoomCode]);
+ useEffect(()=>{
+  if(!activeRoomCode||mode!=="online")return;
+  let cancelled=false;
+  const refreshRoom=async()=>{
+   const {data,error}=await supabase.rpc("ludo_get_room",{p_code:activeRoomCode,p_token:getOnlineToken()});
+   if(cancelled)return;
+   if(error){setOnlineError(error.message);return;}
+   const row=Array.isArray(data)?data[0]:data;
+   if(row?.room_state)applyOnlineState(row.room_state);
+  };
+  const channel=supabase.channel("ludo-room-"+activeRoomCode)
+   .on("postgres_changes",{event:"UPDATE",schema:"public",table:"ludo_rooms",filter:"code=eq."+activeRoomCode},payload=>{
+    if(!cancelled)applyOnlineState((payload.new as any).state);
+   })
+   .subscribe(status=>{
+    if(status==="SUBSCRIBED")void refreshRoom();
+    else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+     setOnlineError("Room connection interrupted. Reconnecting…");
+    }
+   });
+  return()=>{cancelled=true;void supabase.removeChannel(channel);};
+ },[activeRoomCode,mode]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-history",JSON.stringify(matchHistory));}catch{/* History remains available for this session if storage is unavailable. */}},[matchHistory]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-theme",theme);}catch{/* Theme remains available for this session if storage is unavailable. */}},[theme]);
  const playerStats=matchHistory.reduce<Record<string,{played:number;won:number}>>((stats,match)=>{
