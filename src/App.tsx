@@ -115,9 +115,9 @@ export default function App(){
    setMatchHistory(history=>[{id:Date.now(),date:new Date().toISOString(),mode,players:result.players.map(player=>player.name),winner:current.name},...history].slice(0,50));
    return;
   }
-  if(rolled===6||result.captured>0){
+  if(rolled===6||result.captured>0||result.finished){
    setDice(null);setChoices([]);
-   setMessage(result.captured>0?`Captured ${result.captured} opponent token${result.captured>1?"s":""}! You get another turn.`:"Six! You get another turn.");
+   setMessage(result.finished?"Token reached the centre! You get another turn.":result.captured>0?`Captured ${result.captured} opponent token${result.captured>1?"s":""}! You get another turn.`:"Six! You get another turn.");
    return;
   }
   nextTurn();
