@@ -189,7 +189,7 @@ export default function App(){
      <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
      <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span><small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
      <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
-     {champion&&{mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}}
+     {champion&&mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
     </aside>
    </div>
   </section>}
