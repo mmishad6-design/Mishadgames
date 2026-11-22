@@ -92,6 +92,7 @@ function RoomChat({roomCode,playerIndex}:{roomCode:string;playerIndex:number}){
 type VoiceSignal={from:number;to:number;kind:"hello"|"ready"|"offer"|"answer"|"ice";data?:any};
 function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
  const [active,setActive]=useState(false);
+ const voiceSupported=typeof navigator!=="undefined"&&!!navigator.mediaDevices?.getUserMedia&&typeof RTCPeerConnection!=="undefined";
  const [muted,setMuted]=useState(false);
  const [speakerOn,setSpeakerOn]=useState(true);
  const [error,setError]=useState("");
@@ -217,10 +218,10 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
  useEffect(()=>{
   if(active&&channel)sendSignal({from:playerIndex,to:-1,kind:"hello"});
  },[active,channel,playerIndex]);
- useEffect(()=>()=>{peersRef.current.forEach(peer=>peer.close());streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
+ useEffect(()=>()=>{sendSignal({from:playerIndex,to:-1,kind:"ready",data:{leaving:true}});peersRef.current.forEach(peer=>peer.close());streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
  return <section className="room-talk">
   <div className="talk-heading"><span>TALK</span><small>{active?(connected.length?"Connected: "+connected.length:"Waiting for players…"):"Voice chat"}</small></div>
-  <button type="button" className={"talk-main "+(active?"is-talking":"")} onClick={()=>active?stop():void start()} disabled={!channel}>
+  <button type="button" className={"talk-main "+(active?"is-talking":"")} onClick={()=>active?stop():void start()} disabled={!channel||!voiceSupported}>
    <span aria-hidden="true">{active?"■":"🎙"}</span>{active?"LEAVE TALK":"START TALK"}
   </button>
   <div className="talk-controls">
@@ -228,7 +229,7 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
    <button type="button" onClick={toggleSpeaker} disabled={!active}>{speakerOn?"SPEAKER ON":"SPEAKER OFF"}</button>
   </div>
   {error&&<p className="talk-error" role="status">{error}</p>}
-  <p className="talk-note">Room-only voice · Ends when you leave the room.</p>
+  <p className="talk-note">{voiceSupported?"Room-only voice · Ends when you leave the room.":"Voice is not supported in this browser; text chat remains available."}</p>
   {Object.entries(remoteStreams).map(([index,stream])=><RemoteAudio key={index} stream={stream} muted={!speakerOn}/>)}
  </section>;
 }
