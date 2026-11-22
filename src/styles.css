@@ -17,3 +17,6 @@
 @keyframes winnerEnter{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes confettiFall{0%{transform:translateY(-12px) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translateY(190px) rotate(540deg);opacity:0}}
 @media(prefers-reduced-motion:reduce){.winner-celebration,.winner-confetti i{animation:none}}
+
+
+.name-field-label{margin-top:22px}.name-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.name-field{display:grid;gap:6px}.name-field span{color:#718077;font-size:9px;font-weight:800;letter-spacing:1.2px}.name-field input{width:100%;min-width:0;border:1px solid #ded8ca;border-radius:7px;background:#fbf9f3;color:#253a32;padding:11px 12px;font:500 12px "DM Sans",system-ui,sans-serif;outline:none}.name-field input:focus{border-color:#a98a51;box-shadow:0 0 0 2px #c9b17f35}.name-field input:disabled{background:#eeece4;color:#8b9188;cursor:not-allowed}@media(max-width:430px){.name-fields{grid-template-columns:1fr}.name-field input{padding:10px 11px}}
