@@ -175,7 +175,7 @@ export default function App(){
   return()=>window.clearTimeout(timer);
  },[resetRequest?.id,resetRequest?.status]);
 
- useEffect(()=>{if(autoMoveIndex===null||dice===null||!choices.includes(autoMoveIndex)||!started||champion||busy||resetRequest?.status==="pending"||(mode==="online"&&onlineIndex!==turn))return;const timer=window.setTimeout(()=>{moveSelected(autoMoveIndex);setAutoMoveIndex(null);},700);return()=>window.clearTimeout(timer);},[autoMoveIndex,dice,choices,started,champion,busy,resetRequest?.status,mode,onlineIndex,turn,players]);
+
   const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
  const resetGame=()=>{clearTimers();setAutoMoveIndex(null);setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
  const exitOnlineRoom=async()=>{
@@ -216,7 +216,7 @@ export default function App(){
     else{setMessage("No legal move. Turn passes to the next player.");setPassPending(true);passTimer.current=window.setTimeout(()=>nextTurn(),1100);}
     return;
    }
-   setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)autoMoveTimer.current=window.setTimeout(()=>moveSelected(autoIndex),700);
+   setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)setAutoMoveIndex(autoIndex);
    setMessage(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.");
   },450);
  };
@@ -239,6 +239,7 @@ export default function App(){
   }
   nextTurn(result.players);
  };
+ useEffect(()=>{if(autoMoveIndex===null||dice===null||!choices.includes(autoMoveIndex)||!started||champion||busy||resetRequest?.status==="pending"||(mode==="online"&&onlineIndex!==turn))return;const timer=window.setTimeout(()=>{moveSelected(autoMoveIndex);setAutoMoveIndex(null);},700);return()=>window.clearTimeout(timer);},[autoMoveIndex,dice,choices,started,champion,busy,resetRequest?.status,mode,onlineIndex,turn,players]);
  useEffect(()=>{
   if(!started||mode==="online"||!current?.ai||champion||busy||passPending)return;
   aiTimer.current=window.setTimeout(()=>{
