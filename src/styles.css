@@ -127,3 +127,11 @@
 .app-shell[data-theme="dark"] .reset-actions button{background:#d8c18d;color:#203a31;border-color:#d8c18d}
 .app-shell[data-theme="dark"] .reset-actions button+button{background:transparent;color:#f0b1a5;border-color:#8d625a}
 @media(max-width:430px){.score-row{gap:6px;padding:8px}.score-row .dice-face{width:34px;height:34px;min-width:34px}.score-row .presence-status{font-size:8px}}
+
+/* Compact board-matched player labels and clickable home dice */
+.board-svg .home-dice{outline:none;transition:filter .16s ease,transform .16s ease}
+.board-svg .home-dice.is-clickable{cursor:pointer}
+.board-svg .home-dice.is-clickable:hover{filter:drop-shadow(0 2px 4px #172b2466)}
+.board-svg .home-dice.is-clickable:focus-visible rect{stroke:#d6ad56;stroke-width:3}
+.board-svg .home-dice.is-rolling{animation:homeDiceShake .42s ease-in-out}
+@keyframes homeDiceShake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-9deg)}50%{transform:translate(2px,-1px) rotate(8deg)}75%{transform:translate(-1px,1px) rotate(-5deg)}}
