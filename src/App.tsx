@@ -54,7 +54,7 @@ type ChatMessage={id:number;player_index:number;player_name:string;message:strin
 function RoomChat({roomCode,playerIndex}:{roomCode:string;playerIndex:number}){
  const [messages,setMessages]=useState<ChatMessage[]>([]);
  const [draft,setDraft]=useState("");
- const [open,setOpen]=useState(false);
+ const [open,setOpen]=useState(true);
  const [sending,setSending]=useState(false);
  const [error,setError]=useState("");
  const refresh=async()=>{
