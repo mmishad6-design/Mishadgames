@@ -1,9 +1,9 @@
 import {useEffect,useRef,useState} from "react";
 import {BASES,BASE_SPOTS,COLORS,COLOR_NAMES,HOME_LANES,PALETTE,SAFE,START,TRACK,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
 type Mode="local"|"ai";
-function createPlayers(count:number,mode:Mode):Player[]{
+function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
  const colors:Color[]=count===2?["red","yellow"]:count===3?["red","green","yellow"]:COLORS;
- return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":COLOR_NAMES[color],ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
+ return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":(names[index]?.trim()||"Player "+(index+1)),ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
 }
 function Dice({value,rolling}:{value:number|null;rolling:boolean}){
  const faces:Record<number,number[]>={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
@@ -43,6 +43,7 @@ function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choic
 }
 export default function App(){
  const [mode,setMode]=useState<Mode>("local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
+ const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
  const [dice,setDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[message,setMessage]=useState("Roll the dice to begin.");
  const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
  const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined);
@@ -67,7 +68,7 @@ export default function App(){
  };
  const current=players[turn];
  const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
- const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
+ const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
  const backToSetup=()=>{clearTimers();setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
  const nextTurn=()=>{clearTimers();setTurn(value=>(value+1)%players.length);setDice(null);setChoices([]);setBusy(false);setPassPending(false);};
  const rollDice=()=>{
@@ -127,6 +128,7 @@ export default function App(){
      <button className="mode-card coming-soon" disabled><span className="mode-icon">◎</span><span><b>Online Player</b><small>Online rooms are being built</small></span></button>
     </div>
     <label className="field-label">NUMBER OF PLAYERS</label><div className="player-count">{[2,3,4].map(number=><button key={number} className={count===number?"selected":""} onClick={()=>setCount(number)}>{number} Players</button>)}</div>
+    <label className="field-label name-field-label">PLAYER NAMES</label><div className="name-fields">{Array.from({length:count},(_,index)=><label className="name-field" key={index}><span>{mode==="ai"&&index>0?"COMPUTER": "PLAYER "+(index+1)}</span><input value={mode==="ai"&&index>0?"Computer":playerNames[index]} disabled={mode==="ai"&&index>0} maxLength={20} onChange={event=>setPlayerNames(values=>values.map((name,i)=>i===index?event.target.value:name))} placeholder={"Player "+(index+1)}/></label>)}</div>
     <button className="primary-btn" onClick={resetGame}>START NEW GAME <span>→</span></button><p className="footnote">Free to play · No account needed · Made by Mishad</p>
    </div>
   </section>:<section className="play-wrap">
