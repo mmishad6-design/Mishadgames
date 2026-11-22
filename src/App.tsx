@@ -8,9 +8,9 @@ function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
  return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":(names[index]?.trim()||"Player "+(index+1)),ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
 }
 const DICE_DOTS:Record<number,[number,number][]> = {
-  1:[[0,0]],2:[[-11,-11],[11,11]],3:[[-11,-11],[0,0],[11,11]],
-  4:[[-11,-11],[11,-11],[-11,11],[11,11]],5:[[-11,-11],[11,-11],[0,0],[-11,11],[11,11]],
-  6:[[-11,-11],[11,-11],[-11,0],[11,0],[-11,11],[11,11]]
+  1:[[0,0]],2:[[-14,-14],[14,14]],3:[[-14,-14],[0,0],[14,14]],
+  4:[[-14,-14],[14,-14],[-14,14],[14,14]],5:[[-14,-14],[14,-14],[0,0],[-14,14],[14,14]],
+  6:[[-14,-14],[14,-14],[-14,0],[14,0],[-14,14],[14,14]]
 };
 function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void}){
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:tokenPosition(player.color,token,tokenIndex)})));
@@ -39,8 +39,8 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
     onClick={canRoll?onRoll:undefined}
     onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}
    >
-    <rect x="-30" y="-30" width="60" height="60" rx="11" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"2.4":"1.8"}/>
-    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="31" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="31" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="5.2" fill="#244a3e"/>)}
+    <rect x="-36" y="-36" width="72" height="72" rx="13" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"3":"2.2"}/>
+    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="7.2" fill="#244a3e"/>)}
    </g>}
   </g>})}
   {pieces.map(piece=>{
