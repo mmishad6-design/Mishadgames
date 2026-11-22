@@ -52,7 +52,7 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
   })}
   {(()=>{const color=players[turn]?.color;if(!color)return null;const base=BASES[color];return <g
    className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
-   transform={`translate(${base.x*40+120},${base.y*40+120})`}
+   transform={`translate(${base.x*40+(color==="red"||color==="blue"?210:30)},${base.y*40+(color==="red"||color==="green"?210:30)})`}
    role={canRoll?"button":undefined} tabIndex={canRoll?0:undefined}
    aria-label={canRoll?"Click to roll dice":dice===null?"Waiting for dice roll":"Dice shows "+dice}
    onClick={canRoll?onRoll:undefined}
