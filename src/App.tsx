@@ -90,19 +90,20 @@ function RoomChat({roomCode,playerIndex}:{roomCode:string;playerIndex:number}){
 }
 
 type VoiceSignal={from:number;to:number;kind:"hello"|"ready"|"offer"|"answer"|"ice";data?:any};
-function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
+function RoomVoiceChat({playerIndex,roomCode}:{playerIndex:number;roomCode:string}){
  const [active,setActive]=useState(false);
  const voiceSupported=typeof navigator!=="undefined"&&!!navigator.mediaDevices?.getUserMedia&&typeof RTCPeerConnection!=="undefined";
  const [muted,setMuted]=useState(false);
  const [speakerOn,setSpeakerOn]=useState(true);
  const [error,setError]=useState("");
  const [connected,setConnected]=useState<number[]>([]);
+ const [channelReady,setChannelReady]=useState(false);
  const [remoteStreams,setRemoteStreams]=useState<Record<number,MediaStream>>({});
  const streamRef=useRef<MediaStream|null>(null);
+ const pendingIceRef=useRef<Map<number,RTCIceCandidateInit[]>>(new Map());
  const peersRef=useRef<Map<number,RTCPeerConnection>>(new Map());
  const activeRef=useRef(false);
- const channelRef=useRef<any>(channel);
- channelRef.current=channel;
+ const channelRef=useRef<any>(null);
  const sendSignal=(payload:VoiceSignal)=>{
   const currentChannel=channelRef.current;
   if(!currentChannel)return;
@@ -111,6 +112,7 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
  const closePeer=(peerIndex:number)=>{
   const peer=peersRef.current.get(peerIndex);
   if(peer){peer.onicecandidate=null;peer.ontrack=null;peer.onconnectionstatechange=null;peer.close();peersRef.current.delete(peerIndex);}
+  pendingIceRef.current.delete(peerIndex);
   setConnected(values=>values.filter(value=>value!==peerIndex));
   setRemoteStreams(values=>{const next={...values};delete next[peerIndex];return next;});
  };
@@ -142,7 +144,7 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
   return peer;
  };
  const start=async()=>{
-  if(active||!channel)return;
+  if(active||!channelRef.current||!channelReady)return;
   setError("");
   if(!navigator.mediaDevices?.getUserMedia||typeof RTCPeerConnection==="undefined"){
    setError("This browser does not support voice chat. You can keep using text chat.");
@@ -171,7 +173,9 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
  };
  const toggleSpeaker=()=>setSpeakerOn(value=>!value);
  useEffect(()=>{
-  if(!channel)return;
+  setChannelReady(false);
+  const voiceChannel=supabase.channel("ludo-voice-"+roomCode);
+  channelRef.current=voiceChannel;
   const handleSignal=async(message:any)=>{
    const signal=message?.payload as VoiceSignal;
    if(!signal||signal.from===playerIndex||!Number.isInteger(signal.from)||signal.from<0||signal.from>3)return;
@@ -209,25 +213,45 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
     const peer=makePeer(signal.from);
     if(signal.kind==="offer"){
      await peer.setRemoteDescription(new RTCSessionDescription(signal.data));
+     const queued=pendingIceRef.current.get(signal.from)||[];pendingIceRef.current.delete(signal.from);
+     for(const candidate of queued){try{await peer.addIceCandidate(new RTCIceCandidate(candidate));}catch{/* Ignore invalid stale candidates. */}}
      const answer=await peer.createAnswer();await peer.setLocalDescription(answer);
      sendSignal({from:playerIndex,to:signal.from,kind:"answer",data:peer.localDescription});
     }else if(signal.kind==="answer"){
-     if(peer.signalingState==="have-local-offer")await peer.setRemoteDescription(new RTCSessionDescription(signal.data));
+     if(peer.signalingState==="have-local-offer"){
+      await peer.setRemoteDescription(new RTCSessionDescription(signal.data));
+      const queued=pendingIceRef.current.get(signal.from)||[];pendingIceRef.current.delete(signal.from);
+      for(const candidate of queued){try{await peer.addIceCandidate(new RTCIceCandidate(candidate));}catch{/* Ignore invalid stale candidates. */}}
+     }
     }else if(signal.kind==="ice"&&signal.data){
-     try{await peer.addIceCandidate(new RTCIceCandidate(signal.data));}catch{/* Ignore candidates arriving before remote description. */}
+     if(!peer.remoteDescription){
+      const queued=pendingIceRef.current.get(signal.from)||[];
+      queued.push(signal.data as RTCIceCandidateInit);
+      pendingIceRef.current.set(signal.from,queued);
+     }else{
+      await peer.addIceCandidate(new RTCIceCandidate(signal.data));
+     }
     }
    }catch{setError("Voice connection failed. Text chat is still available.");}
   };
-  channel.on("broadcast",{event:"voice-signal"},handleSignal);
-  return()=>{};
- },[channel,playerIndex]);
+  voiceChannel.on("broadcast",{event:"voice-signal"},handleSignal);
+  voiceChannel.subscribe(status=>{
+   if(status==="SUBSCRIBED"){setChannelReady(true);if(activeRef.current)sendSignal({from:playerIndex,to:-1,kind:"hello"});}
+   else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){setChannelReady(false);setError("Voice signaling is unavailable right now. Text chat is still available.");}
+  });
+  return()=>{
+   setChannelReady(false);
+   if(channelRef.current===voiceChannel)channelRef.current=null;
+   void supabase.removeChannel(voiceChannel);
+  };
+ },[roomCode,playerIndex]);
  useEffect(()=>{
-  if(active&&channel)sendSignal({from:playerIndex,to:-1,kind:"hello"});
- },[active,channel,playerIndex]);
+  if(active&&channelReady)sendSignal({from:playerIndex,to:-1,kind:"hello"});
+ },[active,channelReady,playerIndex]);
  useEffect(()=>()=>{sendSignal({from:playerIndex,to:-1,kind:"ready",data:{leaving:true}});peersRef.current.forEach(peer=>peer.close());streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
  return <section className="room-talk">
   <div className="talk-heading"><span>TALK</span><small>{active?(connected.length?"Connected: "+connected.length:"Waiting for players…"):"Voice chat"}</small></div>
-  <button type="button" className={"talk-main "+(active?"is-talking":"")} onClick={()=>active?stop():void start()} disabled={!channel||!voiceSupported}>
+  <button type="button" className={"talk-main "+(active?"is-talking":"")} onClick={()=>active?stop():void start()} disabled={!channelReady||!voiceSupported}>
    <span aria-hidden="true">{active?"■":"🎙"}</span>{active?"LEAVE TALK":"START TALK"}
   </button>
   <div className="talk-controls">
@@ -412,7 +436,7 @@ export default function App(){
  const currentColor=current?PALETTE[current.color]:"#fff";
  return <main className="app-shell" data-theme={theme}>
   <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><div className="header-actions"><button className="theme-toggle" type="button" onClick={()=>setTheme(value=>value==="light"?"dark":"light")} aria-label={theme==="light"?"Switch to night mode":"Switch to light mode"} aria-pressed={theme==="dark"}><span aria-hidden="true">{theme==="light"?"☾":"☀"}</span><span>{theme==="light"?"Night Mode":"Light Mode"}</span></button><span className="edition">A MISHAD ORIGINAL</span></div></header>
-  {mode==="online"&&activeRoomCode&&<div className="room-communication"><RoomChat roomCode={activeRoomCode} playerIndex={onlineIndex}/><RoomVoiceChat playerIndex={onlineIndex} channel={roomChannelRef.current}/></div>}
+  {mode==="online"&&activeRoomCode&&<div className="room-communication"><RoomChat roomCode={activeRoomCode} playerIndex={onlineIndex}/><RoomVoiceChat playerIndex={onlineIndex} roomCode={activeRoomCode}/></div>}
   {!started?<section className="setup-wrap">
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
    
