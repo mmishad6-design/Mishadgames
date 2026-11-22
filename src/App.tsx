@@ -129,7 +129,13 @@ function RoomVoiceChat({playerIndex,channel}:{playerIndex:number;channel:any}){
    if(peer.connectionState==="connected")setConnected(values=>values.includes(peerIndex)?values:[...values,peerIndex]);
    if(peer.connectionState==="failed"||peer.connectionState==="closed"||peer.connectionState==="disconnected"){
     setConnected(values=>values.filter(value=>value!==peerIndex));
-    if(peer.connectionState==="failed")setError("A direct voice connection could not be made on this network. Text chat is still available.");
+    if(peer.connectionState==="failed"){
+     setError("A direct voice connection could not be made on this network. Talk has been turned off; text chat is still available.");
+     activeRef.current=false;streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;
+     peersRef.current.forEach(connection=>connection.close());peersRef.current.clear();
+     setRemoteStreams({});setConnected([]);setActive(false);setMuted(false);
+     sendSignal({from:playerIndex,to:-1,kind:"ready",data:{leaving:true}});
+    }
    }
   };
   peersRef.current.set(peerIndex,peer);
