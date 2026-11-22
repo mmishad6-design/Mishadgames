@@ -304,7 +304,7 @@ export default function App(){
    {mode==="online"&&resetRequest&&<div className="reset-request" role="status">
     {resetRequest.status==="pending"?<>
      <b>Host requested a game reset</b>
-     <p>Approval: {(resetRequest.approvals||[]).length}/{resetRequest.required} players · Expires in 60 seconds.</p>
+     <p>Approval: {(resetRequest.approvals||[]).length}/{resetRequest.required} players · 60-second response window.</p>
      {onlineIndex!==0&&<div className="reset-actions"><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(true)}>ACCEPT RESET</button><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(false)}>DECLINE</button></div>}
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
