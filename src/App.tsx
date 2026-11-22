@@ -47,7 +47,7 @@ function OnlinePanel({name,setName,code,setCode,activeCode,players,onlineIndex,o
  return <div className="online-card"><button className="back-btn online-back" onClick={onBack}>← Game modes</button><span className="step">ONLINE MULTIPLAYER</span><h2>{activeCode?"Your room is ready":"Play with friends online"}</h2>
  <label className="field-label">YOUR PLAYER NAME</label><input className="online-input" value={name} maxLength={20} onChange={e=>setName(e.target.value)} placeholder="Enter your name"/>
  {!activeCode?<><div className="online-actions"><button className="primary-btn" disabled={busy||!name.trim()} onClick={onCreate}>{busy?"CREATING…":"CREATE ROOM"}</button><div className="online-join"><label className="field-label">JOIN WITH ROOM CODE</label><input className="online-input room-code-input" value={code} maxLength={6} inputMode="numeric" onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="secondary-btn" disabled={busy||!name.trim()||code.length!==6} onClick={onJoin}>JOIN ROOM →</button></div></div></>:<><div className="room-code-display"><span>ROOM CODE</span><strong>{activeCode}</strong><button className="secondary-btn" onClick={()=>void navigator.clipboard?.writeText(activeCode)}>COPY CODE</button></div><div className="room-player-list"><b>PLAYERS IN ROOM</b>{players.map((p,i)=><div className="room-player" key={p.color}><i style={{background:PALETTE[p.color]}}/>{p.name}{i===onlineIndex?" (You)":""}{i===0?" · Host":""}<small className={"presence-status "+(onlinePlayers.includes(i)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(i)?"Connected":"Disconnected"):"Checking…"}</small></div>)}</div>{onlineIndex===0?<button className="primary-btn" disabled={players.length<2||busy} onClick={onStart}>{players.length<2?"WAITING FOR PLAYER…":"START ONLINE GAME →"}</button>:<p className="online-waiting">Waiting for the host to start the game…</p>}</>}
- {error&&<p className="online-error" role="alert">{error}</p>}<p className="footnote">Room codes are random 6-digit numbers. Share yours only with friends.</p>{activeCode&&<RoomChat roomCode={activeCode} playerIndex={onlineIndex}/>}</div>;
+ {error&&<p className="online-error" role="alert">{error}</p>}<p className="footnote">Room codes are random 6-digit numbers. Share yours only with friends.</p></div>;
 }
 
 type ChatMessage={id:number;player_index:number;player_name:string;message:string;created_at:string};
@@ -76,7 +76,7 @@ function RoomChat({roomCode,playerIndex}:{roomCode:string;playerIndex:number}){
  };
  return <section className="room-chat">
   <button type="button" className="chat-toggle" onClick={()=>setOpen(value=>!value)} aria-expanded={open}>
-   <span>ROOM CHAT</span><b>{open?"−":"＋"}</b>
+   <span>CHAT</span><b>{open?"−":"＋"}</b>
   </button>
   {open&&<div className="chat-content">
    <div className="chat-messages" aria-live="polite">{messages.length===0?<p className="chat-empty">No messages yet. Say hello! 👋</p>:messages.map(item=><div className={"chat-message "+(item.player_index===playerIndex?"mine":"")} key={item.id}>
@@ -87,6 +87,144 @@ function RoomChat({roomCode,playerIndex}:{roomCode:string;playerIndex:number}){
    <p className="chat-note">Temporary chat · Cleared when everyone leaves the room.</p>
   </div>}
  </section>;
+}
+
+type VoiceSignal={from:number;to:number;kind:"hello"|"ready"|"offer"|"answer"|"ice";data?:any};
+function RoomVoiceChat({roomCode,playerIndex,channel}:{roomCode:string;playerIndex:number;channel:any}){
+ const [active,setActive]=useState(false);
+ const [muted,setMuted]=useState(false);
+ const [speakerOn,setSpeakerOn]=useState(true);
+ const [error,setError]=useState("");
+ const [connected,setConnected]=useState<number[]>([]);
+ const [remoteStreams,setRemoteStreams]=useState<Record<number,MediaStream>>({});
+ const streamRef=useRef<MediaStream|null>(null);
+ const peersRef=useRef<Map<number,RTCPeerConnection>>(new Map());
+ const activeRef=useRef(false);
+ const channelRef=useRef<any>(channel);
+ channelRef.current=channel;
+ const sendSignal=(payload:VoiceSignal)=>{
+  const currentChannel=channelRef.current;
+  if(!currentChannel)return;
+  void currentChannel.send({type:"broadcast",event:"voice-signal",payload});
+ };
+ const closePeer=(peerIndex:number)=>{
+  const peer=peersRef.current.get(peerIndex);
+  if(peer){peer.onicecandidate=null;peer.ontrack=null;peer.onconnectionstatechange=null;peer.close();peersRef.current.delete(peerIndex);}
+  setConnected(values=>values.filter(value=>value!==peerIndex));
+  setRemoteStreams(values=>{const next={...values};delete next[peerIndex];return next;});
+ };
+ const makePeer=(peerIndex:number)=>{
+  const existing=peersRef.current.get(peerIndex);
+  if(existing)return existing;
+  const peer=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+  const local=streamRef.current;
+  if(local)local.getTracks().forEach(track=>peer.addTrack(track,local));
+  peer.onicecandidate=event=>{if(event.candidate)sendSignal({from:playerIndex,to:peerIndex,kind:"ice",data:event.candidate.toJSON()});};
+  peer.ontrack=event=>{
+   const incoming=event.streams[0]||new MediaStream([event.track]);
+   setRemoteStreams(values=>({...values,[peerIndex]:incoming}));
+  };
+  peer.onconnectionstatechange=()=>{
+   if(peer.connectionState==="connected")setConnected(values=>values.includes(peerIndex)?values:[...values,peerIndex]);
+   if(peer.connectionState==="failed"||peer.connectionState==="closed"||peer.connectionState==="disconnected"){
+    setConnected(values=>values.filter(value=>value!==peerIndex));
+    if(peer.connectionState==="failed")setError("A direct voice connection could not be made on this network. Text chat is still available.");
+   }
+  };
+  peersRef.current.set(peerIndex,peer);
+  return peer;
+ };
+ const start=async()=>{
+  if(active||!channel)return;
+  setError("");
+  if(!navigator.mediaDevices?.getUserMedia||typeof RTCPeerConnection==="undefined"){
+   setError("This browser does not support voice chat. You can keep using text chat.");
+   return;
+  }
+  try{
+   const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+   streamRef.current=stream;activeRef.current=true;setActive(true);setMuted(false);
+   sendSignal({from:playerIndex,to:-1,kind:"hello"});
+  }catch(e){
+   activeRef.current=false;
+   const name=e instanceof Error?e.name:"";
+   setError(name==="NotAllowedError"?"Microphone permission was denied. Allow microphone access to use Talk.":"Could not access the microphone. Text chat is still available.");
+  }
+ };
+ const stop=()=>{
+  activeRef.current=false;
+  peersRef.current.forEach(peer=>peer.close());peersRef.current.clear();
+  streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;
+  setRemoteStreams({});setConnected([]);setActive(false);setMuted(false);
+  sendSignal({from:playerIndex,to:-1,kind:"ready",data:{leaving:true}});
+ };
+ const toggleMute=()=>{
+  const next=!muted;setMuted(next);
+  streamRef.current?.getAudioTracks().forEach(track=>{track.enabled=!next;});
+ };
+ const toggleSpeaker=()=>setSpeakerOn(value=>!value);
+ useEffect(()=>{
+  if(!channel)return;
+  const handleSignal=async(message:any)=>{
+   const signal=message?.payload as VoiceSignal;
+   if(!signal||signal.from===playerIndex||!Number.isInteger(signal.from)||signal.from<0||signal.from>3)return;
+   if(signal.to!==-1&&signal.to!==playerIndex)return;
+   if(signal.kind==="hello"){
+    if(activeRef.current)sendSignal({from:playerIndex,to:signal.from,kind:"ready"});
+    return;
+   }
+   if(signal.kind==="ready"){
+    if(signal.data?.leaving){closePeer(signal.from);return;}
+    if(activeRef.current&&playerIndex<signal.from){
+     try{
+      const peer=makePeer(signal.from);
+      if(peer.signalingState==="stable"){
+       const offer=await peer.createOffer();await peer.setLocalDescription(offer);
+       sendSignal({from:playerIndex,to:signal.from,kind:"offer",data:peer.localDescription});
+      }
+     }catch{setError("Could not start the voice connection. Please try Talk again.");}
+    }
+    return;
+   }
+   if(!activeRef.current)return;
+   try{
+    const peer=makePeer(signal.from);
+    if(signal.kind==="offer"){
+     await peer.setRemoteDescription(new RTCSessionDescription(signal.data));
+     const answer=await peer.createAnswer();await peer.setLocalDescription(answer);
+     sendSignal({from:playerIndex,to:signal.from,kind:"answer",data:peer.localDescription});
+    }else if(signal.kind==="answer"){
+     if(peer.signalingState==="have-local-offer")await peer.setRemoteDescription(new RTCSessionDescription(signal.data));
+    }else if(signal.kind==="ice"&&signal.data){
+     try{await peer.addIceCandidate(new RTCIceCandidate(signal.data));}catch{/* Ignore candidates arriving before remote description. */}
+    }
+   }catch{setError("Voice connection failed. Text chat is still available.");}
+  };
+  channel.on("broadcast",{event:"voice-signal"},handleSignal);
+  return()=>{peersRef.current.forEach(peer=>peer.close());peersRef.current.clear();streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;activeRef.current=false;};
+ },[channel,playerIndex]);
+ useEffect(()=>{
+  if(active&&channel)sendSignal({from:playerIndex,to:-1,kind:"hello"});
+ },[active,channel,playerIndex]);
+ useEffect(()=>()=>{peersRef.current.forEach(peer=>peer.close());streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
+ return <section className="room-talk">
+  <div className="talk-heading"><span>TALK</span><small>{active?(connected.length?"Connected: "+connected.length:"Waiting for players…"):"Voice chat"}</small></div>
+  <button type="button" className={"talk-main "+(active?"is-talking":"")} onClick={()=>active?stop():void start()} disabled={!channel}>
+   <span aria-hidden="true">{active?"■":"🎙"}</span>{active?"LEAVE TALK":"START TALK"}
+  </button>
+  <div className="talk-controls">
+   <button type="button" onClick={toggleMute} disabled={!active}>{muted?"MIC OFF":"MIC ON"}</button>
+   <button type="button" onClick={toggleSpeaker} disabled={!active}>{speakerOn?"SPEAKER ON":"SPEAKER OFF"}</button>
+  </div>
+  {error&&<p className="talk-error" role="status">{error}</p>}
+  <p className="talk-note">Room-only voice · Ends when you leave the room.</p>
+  {Object.entries(remoteStreams).map(([index,stream])=><RemoteAudio key={index} stream={stream} muted={!speakerOn}/>)}
+ </section>;
+}
+function RemoteAudio({stream,muted}:{stream:MediaStream;muted:boolean}){
+ const audioRef=useRef<HTMLAudioElement|null>(null);
+ useEffect(()=>{const audio=audioRef.current;if(audio){audio.srcObject=stream;audio.muted=muted;void audio.play().catch(()=>{});}return()=>{if(audio)audio.srcObject=null;};},[stream,muted]);
+ return <audio ref={audioRef} autoPlay playsInline />;
 }
 
 function getOnlineToken(){let token=localStorage.getItem("mishads-ludo-player-token");if(!token){token=crypto.randomUUID();localStorage.setItem("mishads-ludo-player-token",token);}return token;}
@@ -256,6 +394,7 @@ export default function App(){
  const currentColor=current?PALETTE[current.color]:"#fff";
  return <main className="app-shell" data-theme={theme}>
   <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><div className="header-actions"><button className="theme-toggle" type="button" onClick={()=>setTheme(value=>value==="light"?"dark":"light")} aria-label={theme==="light"?"Switch to night mode":"Switch to light mode"} aria-pressed={theme==="dark"}><span aria-hidden="true">{theme==="light"?"☾":"☀"}</span><span>{theme==="light"?"Night Mode":"Light Mode"}</span></button><span className="edition">A MISHAD ORIGINAL</span></div></header>
+  {mode==="online"&&activeRoomCode&&<div className="room-communication"><RoomChat roomCode={activeRoomCode} playerIndex={onlineIndex}/><RoomVoiceChat roomCode={activeRoomCode} playerIndex={onlineIndex} channel={roomChannelRef.current}/></div>}
   {!started?<section className="setup-wrap">
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
    
@@ -284,7 +423,7 @@ export default function App(){
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
      <div className="game-controls"><Dice value={dice} rolling={busy}/><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      <button className="roll-btn" onClick={rollDice} disabled={dice!==null||busy||!!champion||passPending||!!current?.ai||(mode==="online"&&onlineIndex!==turn)}>{busy?"ROLLING…":passPending?"PASSING TURN":current?.ai?"COMPUTER PLAYING":"ROLL DICE"}</button>
-     <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p>{activeRoomCode&&<RoomChat roomCode={activeRoomCode} playerIndex={onlineIndex}/>}</>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
+     <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p></>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
      <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
      <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
      {champion&&mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
