@@ -130,6 +130,7 @@ export default function App(){
     <button className="primary-btn" onClick={resetGame}>START NEW GAME <span>→</span></button><p className="footnote">Free to play · No account needed · Made by Mishad</p>
    </div>
   </section>:<section className="play-wrap">
+   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={resetGame}>PLAY AGAIN <span>↻</span></button></div></div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div><button className="back-btn" onClick={resetGame}>↻ Restart</button></div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={choices} onMove={moveSelected}/></div>
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
