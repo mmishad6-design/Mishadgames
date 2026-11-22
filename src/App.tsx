@@ -15,14 +15,14 @@ function Dice({value,rolling}:{value:number|null;rolling:boolean}){
 function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choices:number[];onMove:(i:number)=>void}){
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:tokenPosition(player.color,token,tokenIndex)})));
  return <svg className="board-svg" viewBox="0 0 600 600" role="img" aria-label="Classic Ludo board">
-  <rect width="600" height="600" fill="#fffdf7"/>
+  <rect width="600" height="600" fill="var(--board-surface)"/>
   {COLORS.map(color=>{const base=BASES[color];return <g key={color}>
    <rect x={base.x*40} y={base.y*40} width="240" height="240" fill={PALETTE[color]} stroke="#283b36" strokeWidth="2"/>
    <rect x={base.x*40+34} y={base.y*40+34} width="172" height="172" rx="9" fill="#fffdf7" stroke="#fff" strokeWidth="5"/>
    {BASE_SPOTS[color].map(([x,y],index)=><circle key={index} cx={x*40} cy={y*40} r="25" fill={PALETTE[color]} stroke="#d7d2c5" strokeWidth="3"/>)}
   </g>})}
   {TRACK.map(([x,y],index)=><g key={index}>
-   <rect x={x*40} y={y*40} width="40" height="40" fill={SAFE.has(index)?"#f2e8cb":"#fffdf7"} stroke="#b8b9af" strokeWidth="1.2"/>
+   <rect x={x*40} y={y*40} width="40" height="40" fill={SAFE.has(index)?"var(--board-safe)":"var(--board-surface)"} stroke="#b8b9af" strokeWidth="1.2"/>
    {SAFE.has(index)&&<text x={x*40+20} y={y*40+26} textAnchor="middle" fontSize="18" fill="#a18a56">✦</text>}
    {Object.entries(START).some(([,start])=>start===index)&&<rect x={x*40+3} y={y*40+3} width="34" height="34" fill={PALETTE[Object.keys(START).find(key=>START[key as Color]===index) as Color]} opacity=".9"/>}
   </g>)}
@@ -44,6 +44,7 @@ function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choic
 }
 export default function App(){
  const [mode,setMode]=useState<Mode>("local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
+ const [theme,setTheme]=useState<"light"|"dark">(()=>{try{return localStorage.getItem("mishads-ludo-theme")==="dark"?"dark":"light";}catch{return "light";}});
  const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
  const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
   try{return JSON.parse(localStorage.getItem("mishads-ludo-history")||"[]") as MatchRecord[];}catch{return [];}
@@ -132,14 +133,15 @@ export default function App(){
  },[started,current?.ai,turn,dice,choices,busy,champion,passPending,players]);
  useEffect(()=>()=>clearTimers(),[]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-history",JSON.stringify(matchHistory));}catch{/* History remains available for this session if storage is unavailable. */}},[matchHistory]);
+ useEffect(()=>{try{localStorage.setItem("mishads-ludo-theme",theme);}catch{/* Theme remains available for this session if storage is unavailable. */}},[theme]);
  const playerStats=matchHistory.reduce<Record<string,{played:number;won:number}>>((stats,match)=>{
   for(const name of match.players){stats[name]??={played:0,won:0};stats[name].played+=1;if(name===match.winner)stats[name].won+=1;}
   return stats;
  },{});
  const rankedStats=Object.entries(playerStats).sort((a,b)=>b[1].won-a[1].won||b[1].played-a[1].played);
  const currentColor=current?PALETTE[current.color]:"#fff";
- return <main className="app-shell">
-  <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><span className="edition">A MISHAD ORIGINAL</span></header>
+ return <main className="app-shell" data-theme={theme}>
+  <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><div className="header-actions"><button className="theme-toggle" type="button" onClick={()=>setTheme(value=>value==="light"?"dark":"light")} aria-label={theme==="light"?"Switch to night mode":"Switch to light mode"} aria-pressed={theme==="dark"}><span aria-hidden="true">{theme==="light"?"☾":"☀"}</span><span>{theme==="light"?"Night Mode":"Light Mode"}</span></button><span className="edition">A MISHAD ORIGINAL</span></div></header>
   {!started?<section className="setup-wrap">
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
    <div className="setup-card"><span className="step">01 / GAME SETUP</span><h2>Choose how you want to play</h2>
