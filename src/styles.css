@@ -108,25 +108,4 @@
 .app-shell[data-theme="dark"] .chat-note,.app-shell[data-theme="dark"] .chat-empty,.app-shell[data-theme="dark"] .chat-message time{color:#aab5a9}
 
 
-/* Room communication: text chat and optional WebRTC voice */
-.room-communication{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;width:100%;max-width:1120px;margin:0 auto 16px;align-items:stretch}
-.room-communication .room-chat,.room-communication .room-talk{min-width:0;margin:0;border:1px solid #d8d0bf;border-radius:10px;overflow:hidden;background:#fbf9f3;color:#263b35}
-.room-communication .chat-toggle,.talk-heading{min-height:43px;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:0;background:#f0eadc;color:#34483d;font-size:10px;font-weight:800;letter-spacing:1.4px}
-.talk-heading small{font-size:9px;font-weight:600;letter-spacing:.2px;color:#879084}
-.talk-main{display:flex;align-items:center;justify-content:center;gap:9px;width:calc(100% - 24px);margin:12px;border:0;border-radius:8px;padding:13px;background:#204b41;color:#fff8e9;font-size:10px;font-weight:800;letter-spacing:1px}
-.talk-main.is-talking{background:#9a5148}
-.talk-main:disabled{opacity:.5;cursor:not-allowed}
-.talk-controls{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 12px}
-.talk-controls button{border:1px solid #d9d3c6;border-radius:7px;background:#fffdf7;color:#536358;padding:9px 5px;font-size:9px;font-weight:800}
-.talk-controls button:disabled{opacity:.4}
-.talk-note,.talk-error{margin:9px 12px 11px;text-align:center;font-size:9px;color:#879084;line-height:1.4}
-.talk-error{color:#b83f3f}
-.room-talk audio{display:none}
-.app-shell[data-theme="dark"] .room-communication .room-chat,
-.app-shell[data-theme="dark"] .room-communication .room-talk{background:#192a2d;color:#e9e4d6;border-color:#42534d}
-.app-shell[data-theme="dark"] .room-communication .chat-toggle,
-.app-shell[data-theme="dark"] .talk-heading{background:#26383a;color:#f0eadb}
-.app-shell[data-theme="dark"] .talk-heading small,
-.app-shell[data-theme="dark"] .talk-note{color:#aab5a9}
-.app-shell[data-theme="dark"] .talk-controls button{background:#223638;color:#e9e4d6;border-color:#52645c}
-@media(max-width:620px){.room-communication{grid-template-columns:1fr;gap:9px}.room-communication .chat-messages{max-height:170px}}
+.room-communication{width:100%;max-width:720px;margin:0 auto 16px}\n
