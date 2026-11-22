@@ -153,7 +153,6 @@ function RoomVoiceChat({playerIndex,roomCode}:{playerIndex:number;roomCode:strin
   try{
    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
    streamRef.current=stream;activeRef.current=true;setActive(true);setMuted(false);
-   sendSignal({from:playerIndex,to:-1,kind:"hello"});
   }catch(e){
    activeRef.current=false;
    const name=e instanceof Error?e.name:"";
@@ -236,7 +235,7 @@ function RoomVoiceChat({playerIndex,roomCode}:{playerIndex:number;roomCode:strin
   };
   voiceChannel.on("broadcast",{event:"voice-signal"},handleSignal);
   voiceChannel.subscribe(status=>{
-   if(status==="SUBSCRIBED"){setChannelReady(true);if(activeRef.current)sendSignal({from:playerIndex,to:-1,kind:"hello"});}
+   if(status==="SUBSCRIBED"){setChannelReady(true)}
    else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){setChannelReady(false);setError("Voice signaling is unavailable right now. Text chat is still available.");}
   });
   return()=>{
