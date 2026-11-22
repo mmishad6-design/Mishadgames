@@ -12,7 +12,7 @@ const DICE_DOTS:Record<number,[number,number][]>={
   4:[[-8,-8],[8,-8],[-8,8],[8,8]],5:[[-8,-8],[8,-8],[0,0],[-8,8],[8,8]],
   6:[[-8,-8],[8,-8],[-8,0],[8,0],[-8,8],[8,8]]
 };
-function Board({players,turn,choices,dice,rolling,onMove}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;onMove:(i:number)=>void}){
+function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void}){
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:tokenPosition(player.color,token,tokenIndex)})));
  return <svg className="board-svg" viewBox="0 0 600 600" role="img" aria-label="Classic Ludo board">
   <rect width="600" height="600" fill="var(--board-surface)"/>
@@ -29,9 +29,17 @@ function Board({players,turn,choices,dice,rolling,onMove}:{players:Player[];turn
   {Object.entries(HOME_LANES).map(([color,cells])=>cells.map(([x,y],index)=><rect key={color+index} x={x*40} y={y*40} width="40" height="40" fill={PALETTE[color as Color]} stroke="#b8b9af" strokeWidth="1.2"/>))}
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
   {COLORS.map(color=>{const base=BASES[color];const active=players[turn]?.color===color;return <g key={color}>
-   <text x={base.x*40+120} y={base.y*40+22} textAnchor="middle" fontSize="10" fontWeight="800" letterSpacing="1" textLength="190" lengthAdjust="spacingAndGlyphs" fill="#fff">{players.find(player=>player.color===color)?.name||COLOR_NAMES[color].toUpperCase()}</text>
-   {active&&<g transform={`translate(${base.x*40+120},${base.y*40+220})`}>
-    <rect x="-17" y="-17" width="34" height="34" rx="7" fill="#fffdf7" stroke="#806d4d" strokeWidth="1.5"/>
+   <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontSize="7.2" fontWeight="700" letterSpacing=".35" textLength="148" lengthAdjust="spacingAndGlyphs" fill="#fff">{players.find(player=>player.color===color)?.name||COLOR_NAMES[color].toUpperCase()}</text>
+   {active&&<g
+    className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
+    transform={`translate(${base.x*40+120},${base.y*40+120})`}
+    role={canRoll?"button":undefined}
+    tabIndex={canRoll?0:undefined}
+    aria-label={canRoll?"Click to roll dice":dice===null?"Waiting for dice roll":"Dice shows "+dice}
+    onClick={canRoll?onRoll:undefined}
+    onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}
+   >
+    <rect x="-17" y="-17" width="34" height="34" rx="7" fill="#fffdf7" stroke={canRoll?"#244a3e":"#806d4d"} strokeWidth={canRoll?"2":"1.5"}/>
     {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="20" fontWeight="800" fill="#244a3e">…</text>:dice===null?<text textAnchor="middle" dominantBaseline="central" fontSize="20" fill="#244a3e">⚄</text>:DICE_DOTS[dice].map(([dx,dy],dot)=><circle key={dot} cx={dx} cy={dy} r="2.8" fill="#244a3e"/>)}
    </g>}
   </g>})}
@@ -314,7 +322,7 @@ export default function App(){
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
-   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(onlineIndex!==turn||resetRequest?.status==="pending")?[]:choices} dice={dice} rolling={busy} onMove={moveSelected}/></div>
+   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(onlineIndex!==turn||resetRequest?.status==="pending")?[]:choices} dice={dice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineIndex===turn)} onRoll={()=>void rollDice()} onMove={moveSelected}/></div>
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
      <div className="game-controls"><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      <button className="roll-btn" onClick={rollDice} disabled={dice!==null||busy||!!champion||passPending||!!current?.ai||resetRequest?.status==="pending"||(mode==="online"&&onlineIndex!==turn)}>{busy?"ROLLING…":passPending?"PASSING TURN":current?.ai?"COMPUTER PLAYING":"ROLL DICE"}</button>
