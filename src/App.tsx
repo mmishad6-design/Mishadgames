@@ -89,7 +89,7 @@ export default function App(){
  const startOnlineRoom=async()=>{if(!activeRoomCode)return;setOnlineBusy(true);setOnlineError("");const {data,error}=await supabase.rpc("ludo_start_room",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error)setOnlineError(error.message);else applyOnlineState(data);setOnlineBusy(false);};
  const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);};
  const resetGame=()=>{clearTimers();setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
- const backToSetup=()=>{clearTimers();setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
+ const backToSetup=()=>{clearTimers();if(mode==="online"){setMode("local");setActiveRoomCode(null);setOnlineError("");}setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
  const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
  const rollDice=async()=>{
   if(!started||!current||dice!==null||busy||champion||passPending)return;
@@ -180,8 +180,8 @@ export default function App(){
    </section>}
 
   </section>:<section className="play-wrap">
-   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={resetGame}>PLAY AGAIN <span>↻</span></button></div></div>}
-   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div><button className="back-btn" onClick={resetGame}>↻ Restart</button></div>
+   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={resetGame} disabled={mode==="online"}>PLAY AGAIN <span>↻</span></button></div></div>}
+   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div><button className="back-btn" onClick={resetGame} disabled={mode==="online"}>↻ Restart</button></div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&onlineIndex!==turn?[]:choices} onMove={moveSelected}/></div>
     <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
      <div className="game-controls"><Dice value={dice} rolling={busy}/><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
@@ -189,7 +189,7 @@ export default function App(){
      <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
      <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span><small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
      <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
-     {champion&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
+     {champion&&{mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}}
     </aside>
    </div>
   </section>}
