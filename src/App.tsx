@@ -43,10 +43,10 @@ function Board({players,turn,choices,onMove}:{players:Player[];turn:number;choic
   })}
  </svg>;
 }
-function OnlinePanel({name,setName,code,setCode,activeCode,players,onlineIndex,error,busy,onCreate,onJoin,onStart,onBack}:{name:string;setName:(v:string)=>void;code:string;setCode:(v:string)=>void;activeCode:string|null;players:Player[];onlineIndex:number;error:string;busy:boolean;onCreate:()=>void;onJoin:()=>void;onStart:()=>void;onBack:()=>void}){
+function OnlinePanel({name,setName,code,setCode,activeCode,players,onlineIndex,onlinePlayers,presenceReady,error,busy,onCreate,onJoin,onStart,onBack}:{name:string;setName:(v:string)=>void;code:string;setCode:(v:string)=>void;activeCode:string|null;players:Player[];onlineIndex:number;onlinePlayers:number[];presenceReady:boolean;error:string;busy:boolean;onCreate:()=>void;onJoin:()=>void;onStart:()=>void;onBack:()=>void}){
  return <div className="online-card"><button className="back-btn online-back" onClick={onBack}>← Game modes</button><span className="step">ONLINE MULTIPLAYER</span><h2>{activeCode?"Your room is ready":"Play with friends online"}</h2>
  <label className="field-label">YOUR PLAYER NAME</label><input className="online-input" value={name} maxLength={20} onChange={e=>setName(e.target.value)} placeholder="Enter your name"/>
- {!activeCode?<><div className="online-actions"><button className="primary-btn" disabled={busy||!name.trim()} onClick={onCreate}>{busy?"CREATING…":"CREATE ROOM"}</button><div className="online-join"><label className="field-label">JOIN WITH ROOM CODE</label><input className="online-input room-code-input" value={code} maxLength={6} inputMode="numeric" onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="secondary-btn" disabled={busy||!name.trim()||code.length!==6} onClick={onJoin}>JOIN ROOM →</button></div></div></>:<><div className="room-code-display"><span>ROOM CODE</span><strong>{activeCode}</strong><button className="secondary-btn" onClick={()=>void navigator.clipboard?.writeText(activeCode)}>COPY CODE</button></div><div className="room-player-list"><b>PLAYERS IN ROOM</b>{players.map((p,i)=><div className="room-player" key={p.color}><i style={{background:PALETTE[p.color]}}/>{p.name}{i===onlineIndex?" (You)":""}{i===0?" · Host":""}</div>)}</div>{onlineIndex===0?<button className="primary-btn" disabled={players.length<2||busy} onClick={onStart}>{players.length<2?"WAITING FOR PLAYER…":"START ONLINE GAME →"}</button>:<p className="online-waiting">Waiting for the host to start the game…</p>}</>}
+ {!activeCode?<><div className="online-actions"><button className="primary-btn" disabled={busy||!name.trim()} onClick={onCreate}>{busy?"CREATING…":"CREATE ROOM"}</button><div className="online-join"><label className="field-label">JOIN WITH ROOM CODE</label><input className="online-input room-code-input" value={code} maxLength={6} inputMode="numeric" onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code"/><button className="secondary-btn" disabled={busy||!name.trim()||code.length!==6} onClick={onJoin}>JOIN ROOM →</button></div></div></>:<><div className="room-code-display"><span>ROOM CODE</span><strong>{activeCode}</strong><button className="secondary-btn" onClick={()=>void navigator.clipboard?.writeText(activeCode)}>COPY CODE</button></div><div className="room-player-list"><b>PLAYERS IN ROOM</b>{players.map((p,i)=><div className="room-player" key={p.color}><i style={{background:PALETTE[p.color]}}/>{p.name}{i===onlineIndex?" (You)":""}{i===0?" · Host":""}<small className={"presence-status "+(onlinePlayers.includes(i)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(i)?"Connected":"Disconnected"):"Checking…"}</small></div>)}</div>{onlineIndex===0?<button className="primary-btn" disabled={players.length<2||busy} onClick={onStart}>{players.length<2?"WAITING FOR PLAYER…":"START ONLINE GAME →"}</button>:<p className="online-waiting">Waiting for the host to start the game…</p>}</>}
  {error&&<p className="online-error" role="alert">{error}</p>}<p className="footnote">Room codes are random 6-digit numbers. Share yours only with friends.</p></div>;
 }
 function getOnlineToken(){let token=localStorage.getItem("mishads-ludo-player-token");if(!token){token=crypto.randomUUID();localStorage.setItem("mishads-ludo-player-token",token);}return token;}
@@ -57,7 +57,7 @@ function getSavedOnlineSession():{roomCode:string;playerIndex:number;name:string
 
 export default function App(){
  const [mode,setMode]=useState<Mode>(()=>getSavedOnlineSession()?"online":"local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
- const [onlineName,setOnlineName]=useState(()=>getSavedOnlineSession()?.name||""),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(()=>getSavedOnlineSession()?.roomCode||null),[onlineIndex,setOnlineIndex]=useState(()=>getSavedOnlineSession()?.playerIndex||0),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false),[reconnectKey,setReconnectKey]=useState(0);
+ const [onlineName,setOnlineName]=useState(()=>getSavedOnlineSession()?.name||""),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(()=>getSavedOnlineSession()?.roomCode||null),[onlineIndex,setOnlineIndex]=useState(()=>getSavedOnlineSession()?.playerIndex||0),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false),[reconnectKey,setReconnectKey]=useState(0);const [onlinePlayers,setOnlinePlayers]=useState<number[]>([]),[presenceReady,setPresenceReady]=useState(false);
  const [theme,setTheme]=useState<"light"|"dark">(()=>{try{return localStorage.getItem("mishads-ludo-theme")==="dark"?"dark":"light";}catch{return "light";}});
  const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
  const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
@@ -161,18 +161,30 @@ export default function App(){
    const row=Array.isArray(data)?data[0]:data;
    if(row?.room_state)applyOnlineState(row.room_state);
   };
+  setPresenceReady(false);
+  setOnlinePlayers([]);
   const channel=supabase.channel("ludo-room-"+activeRoomCode+"-"+reconnectKey)
    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"ludo_rooms",filter:"code=eq."+activeRoomCode},payload=>{
     if(!cancelled)applyOnlineState((payload.new as any).state);
    })
+   .on("presence",{event:"sync"},()=>{
+    if(cancelled)return;
+    const state=channel.presenceState<{playerIndex:number;name:string}>();
+    const connected=Object.values(state).flat().map(meta=>meta.playerIndex).filter(index=>Number.isInteger(index));
+    setOnlinePlayers(Array.from(new Set(connected)));
+    setPresenceReady(true);
+   })
    .subscribe(status=>{
-    if(status==="SUBSCRIBED")void refreshRoom();
+    if(status==="SUBSCRIBED"){
+     void refreshRoom();
+     void channel.track({playerIndex:onlineIndex,name:onlineName.trim(),onlineAt:new Date().toISOString()});
+    }
     else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
      setOnlineError("Room connection interrupted. Reconnecting…");
     }
    });
   return()=>{cancelled=true;void supabase.removeChannel(channel);};
- },[activeRoomCode,mode,reconnectKey]);
+ },[activeRoomCode,mode,reconnectKey,onlineIndex,onlineName]);
  useEffect(()=>{
   if(!activeRoomCode||mode!=="online")return;
   const reconnect=()=>{if(document.visibilityState==="visible"&&navigator.onLine){setOnlineError("");setReconnectKey(value=>value+1);}};
@@ -195,7 +207,7 @@ export default function App(){
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
    
    <div className="setup-card"><span className="step">01 / GAME SETUP</span><h2>Choose how you want to play</h2>
-    {mode==="online"?<OnlinePanel name={onlineName} setName={setOnlineName} code={joinCode} setCode={setJoinCode} activeCode={activeRoomCode} players={players} onlineIndex={onlineIndex} error={onlineError} busy={onlineBusy} onCreate={createOnlineRoom} onJoin={joinOnlineRoom} onStart={startOnlineRoom} onBack={()=>{setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");}}/>:<>
+    {mode==="online"?<OnlinePanel name={onlineName} setName={setOnlineName} code={joinCode} setCode={setJoinCode} activeCode={activeRoomCode} players={players} onlineIndex={onlineIndex} onlinePlayers={onlinePlayers} presenceReady={presenceReady} error={onlineError} busy={onlineBusy} onCreate={createOnlineRoom} onJoin={joinOnlineRoom} onStart={startOnlineRoom} onBack={()=>{setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");}}/>:<>
     <div className="mode-grid">
      <button className={"mode-card "+(mode==="local"?"selected":"")} onClick={()=>setMode("local")}><span className="mode-icon">♟</span><span><b>Local Player</b><small>Pass one device between players</small></span></button>
      <button className={"mode-card "+(mode==="ai"?"selected":"")} onClick={()=>setMode("ai")}><span className="mode-icon">✦</span><span><b>AI Player</b><small>Play against computer opponents</small></span></button>
