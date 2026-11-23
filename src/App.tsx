@@ -216,12 +216,12 @@ export default function App(){
     else{setMessage("No legal move. Turn passes to the next player.");setPassPending(true);passTimer.current=window.setTimeout(()=>nextTurn(),1100);}
     return;
    }
-   setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)setAutoMoveIndex(autoIndex);
-   setMessage(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.");
+   setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;if(autoIndex!==null){setAutoMoveIndex(autoIndex);setMessage(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically...");}else{setAutoMoveIndex(null);setMessage(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.");}
   },450);
  };
  const moveSelected=(tokenIndex:number)=>{
   if(dice===null||!choices.includes(tokenIndex)||!current||champion||resetRequest?.status==="pending")return;
+  setAutoMoveIndex(null);
   const rolled=dice;
   const result=moveToken(players,turn,tokenIndex,rolled);
   if(result.players===players)return;
