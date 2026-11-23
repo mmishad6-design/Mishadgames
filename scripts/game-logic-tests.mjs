@@ -46,6 +46,14 @@ test("a token can finish only with an exact roll", () => {
   assert.deepEqual(legalTokens(p, 2), []);
 });
 
+test("an exact home-lane finish is allowed even when a friendly token is ahead", () => {
+  const red = player("red", [51, 54, -1, -1]);
+  assert.deepEqual(legalTokens(red, 5, [red]), [0]);
+  const result = moveToken([red], 0, 0, 5);
+  assert.equal(result.players[0].tokens[0].progress, 56);
+  assert.equal(result.finished, true);
+});
+
 test("a blockade on an ordinary track cell blocks passing through it", () => {
   const red = player("red", [4, -1, -1, -1]);
   const yellowProgress = absoluteProgress("yellow", 6);
