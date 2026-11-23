@@ -35,7 +35,11 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove}:{player
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
   {COLORS.map(color=>{const base=BASES[color];const playerName=players.find(player=>player.color===color)?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;return <g key={color}>
    <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={nameSize} fontWeight="500" letterSpacing="0" fill="#fff">{playerName}</text>
-
+   {players[turn]?.color===color&&<g pointerEvents="none">
+    <rect x={base.x*40+7} y={base.y*40+7} width="226" height="226" rx="12" fill="none" stroke="#f4d28a" strokeWidth="5"/>
+    <rect x={base.x*40+82} y={base.y*40+31} width="76" height="19" rx="9.5" fill="#f4d28a"/>
+    <text x={base.x*40+120} y={base.y*40+44.5} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="9" fontWeight="800" letterSpacing=".8" fill="#26372f">CURRENT TURN</text>
+   </g>}
   </g>})}
   {pieces.map(piece=>{
    const [x,y]=piece.pos;
@@ -333,9 +337,9 @@ export default function App(){
      {onlineIndex!==0&&<div className="reset-actions"><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(true)}>ACCEPT RESET</button><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(false)}>DECLINE</button></div>}
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
-   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="turn-label"><i style={{background:currentColor}}/>{champion?champion+" wins":(current?.name??"Player")+"'s turn"}</div>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
+   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(onlineIndex!==turn||resetRequest?.status==="pending")?[]:choices} dice={dice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineIndex===turn)} onRoll={()=>void rollDice()} onMove={moveSelected}/></div>
-    <aside className="game-side"><span className="step">{champion?"GAME FINISHED":mode==="online"&&onlineIndex!==turn?"OPPONENT TURN":current?.ai?"COMPUTER TURN":"YOUR MOVE"}</span>
+    <aside className="game-side">
      <div className="game-controls"><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
      
      <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p></>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
