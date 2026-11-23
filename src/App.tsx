@@ -304,7 +304,7 @@ export default function App(){
  },{});
  const rankedStats=Object.entries(playerStats).sort((a,b)=>b[1].won-a[1].won||b[1].played-a[1].played);
  return <main className="app-shell" data-theme={theme}>
-  <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><div className="header-actions"><button className="theme-toggle" type="button" onClick={()=>setTheme(value=>value==="light"?"dark":"light")} aria-label={theme==="light"?"Switch to night mode":"Switch to light mode"} aria-pressed={theme==="dark"}><span aria-hidden="true">{theme==="light"?"☾":"☀"}</span><span>{theme==="light"?"Night Mode":"Light Mode"}</span></button><span className="edition">A MISHAD ORIGINAL</span></div></header>
+  <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><div className="header-actions"><button className="sound-header-toggle" type="button" onClick={()=>setSoundEnabled(value=>!value)} aria-label={soundEnabled?"Turn sound off":"Turn sound on"} aria-pressed={soundEnabled} title={soundEnabled?"Sound on":"Sound off"}>{soundEnabled?"🔊":"🔇"}</button><button className="theme-toggle" type="button" onClick={()=>setTheme(value=>value==="light"?"dark":"light")} aria-label={theme==="light"?"Switch to night mode":"Switch to light mode"} aria-pressed={theme==="dark"}><span aria-hidden="true">{theme==="light"?"☾":"☀"}</span><span>{theme==="light"?"Night Mode":"Light Mode"}</span></button><span className="edition">A MISHAD ORIGINAL</span></div></header>
   {mode==="online"&&activeRoomCode&&<div className="room-communication"><RoomChat roomCode={activeRoomCode} playerIndex={onlineIndex}/></div>}
   {!started?<section className="setup-wrap">
    <div className="hero"><span className="eyebrow">A timeless game, made for good company</span><h1>Gather around.<br/><em>Let’s play.</em></h1><p>Bring everyone together for a classic game of Ludo.</p></div>
@@ -338,16 +338,9 @@ export default function App(){
    </div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(onlineIndex!==turn||resetRequest?.status==="pending")?[]:choices} dice={dice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineIndex===turn)} onRoll={()=>void rollDice()} onMove={moveSelected}/></div>
-    <aside className="game-side">
-     <div className="game-controls"><button type="button" className="sound-toggle" aria-pressed={soundEnabled} onClick={()=>setSoundEnabled(value=>!value)}>{soundEnabled?"🔊 Sound On":"🔇 Sound Off"}</button></div>
-     
-     <p className="game-message" aria-live="polite">{message}</p>{mode==="online"&&<><p className="online-room-badge">ONLINE ROOM · {activeRoomCode}</p></>}{onlineError&&<p className="online-error" role="alert">{onlineError}</p>}
-     <div className="score-list">{players.map((player,index)=><div key={player.color} className={"score-row "+(index===turn?"is-turn":"")}><i style={{background:PALETTE[player.color]}}/><span>{player.name}{player.ai?" · AI":""}</span>{mode==="online"&&<small className={"presence-status "+(onlinePlayers.includes(index)?"is-online":"is-offline")}>{presenceReady?(onlinePlayers.includes(index)?"Online":"Offline"):"Checking…"}</small>}<small>{player.tokens.filter(token=>token.progress===56).length}/4 finished</small></div>)}</div>
-     <p className="rule-note">A six brings a token out. Landing on an opponent sends it home. Safe squares protect tokens. You need an exact roll to finish.</p>
-     {champion&&mode!=="online"&&<button className="primary-btn replay-btn" onClick={resetGame}>PLAY AGAIN</button>}
-    </aside>
+    
    </div>
   </section>}
-  <footer>© {new Date().getFullYear()} Mishad's Ludo <span>·</span> MISHAD EDITION</footer>
+  {!started&&<footer>© {new Date().getFullYear()} Mishad's Ludo <span>·</span> MISHAD EDITION</footer>}
  </main>;
 }
