@@ -72,6 +72,9 @@ function isBlockade(players: Player[], x: number, y: number): boolean {
 }
 
 function pathIsClear(player: Player, token: Token, dice: number, players: Player[]): boolean {
+  // Home lanes are private to each colour: a friendly token farther ahead
+  // must never create a blockade or prevent an exact finish.
+  if (token.progress >= 51 && token.progress <= 55) return true;
   const start = token.progress === -1 ? -1 : token.progress;
   const end = token.progress === -1 ? 0 : token.progress + dice;
   // Starting cells are safe squares: a pair parked there does not block other tokens passing through.
