@@ -325,7 +325,7 @@ export default function App(){
    </section>}
 
   </section>:<section className="play-wrap">
-   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={resetGame} disabled={mode==="online"}>PLAY AGAIN <span>↻</span></button></div></div>}
+   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={mode==="online"?()=>void requestOnlineReset():resetGame} disabled={mode==="online"&&(onlineIndex!==0||onlineBusy||resetRequest?.status==="pending")}>{mode==="online"?"REQUEST REPLAY":"PLAY AGAIN"} <span>↻</span></button></div></div>}
    {mode==="online"&&resetRequest&&<div className="reset-request" role="status">
     {resetRequest.status==="pending"?<>
      <b>Host requested a game reset</b>
