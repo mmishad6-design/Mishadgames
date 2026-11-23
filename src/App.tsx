@@ -303,7 +303,6 @@ export default function App(){
   return stats;
  },{});
  const rankedStats=Object.entries(playerStats).sort((a,b)=>b[1].won-a[1].won||b[1].played-a[1].played);
- const currentColor=current?PALETTE[current.color]:"#fff";
  return <main className="app-shell" data-theme={theme}>
   <header className="topbar"><div className="brand"><div className="brand-mark">M</div><div><strong>MISHAD'S LUDO</strong><small>THE CLASSIC. YOUR WAY.</small></div></div><div className="header-actions"><button className="theme-toggle" type="button" onClick={()=>setTheme(value=>value==="light"?"dark":"light")} aria-label={theme==="light"?"Switch to night mode":"Switch to light mode"} aria-pressed={theme==="dark"}><span aria-hidden="true">{theme==="light"?"☾":"☀"}</span><span>{theme==="light"?"Night Mode":"Light Mode"}</span></button><span className="edition">A MISHAD ORIGINAL</span></div></header>
   {mode==="online"&&activeRoomCode&&<div className="room-communication"><RoomChat roomCode={activeRoomCode} playerIndex={onlineIndex}/></div>}
