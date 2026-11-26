@@ -208,3 +208,31 @@
  100%{transform:rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
 }
 @media(prefers-reduced-motion:reduce){.board-svg .home-dice.is-rolling .dice-cube{animation:none}}
+
+
+/* Polished dice roll: a quick lift, multi-axis tumble, and soft landing. */
+.board-svg .home-dice.is-rolling{
+ animation:diceRollLift .45s cubic-bezier(.2,.75,.25,1);
+}
+.board-svg .home-dice.is-rolling .dice-cube{
+ transform-box:fill-box;
+ transform-origin:center;
+ animation:diceRollTumble .45s cubic-bezier(.18,.72,.24,1);
+}
+@keyframes diceRollLift{
+ 0%,100%{filter:drop-shadow(4px 7px 3px #17251f55)}
+ 22%{filter:drop-shadow(8px 15px 6px #17251f77)}
+ 48%{filter:drop-shadow(-3px 10px 5px #17251f66)}
+ 78%{filter:drop-shadow(6px 11px 4px #17251f66)}
+}
+@keyframes diceRollTumble{
+ 0%{transform:translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.94)}
+ 18%{transform:translateY(-8px) rotateX(48deg) rotateY(62deg) rotateZ(105deg) scale(1.08)}
+ 42%{transform:translateY(-3px) rotateX(142deg) rotateY(168deg) rotateZ(225deg) scale(1.04)}
+ 68%{transform:translateY(-6px) rotateX(250deg) rotateY(278deg) rotateZ(305deg) scale(1.07)}
+ 86%{transform:translateY(1px) rotateX(330deg) rotateY(340deg) rotateZ(350deg) scale(.99)}
+ 100%{transform:translateY(0) rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+ .board-svg .home-dice.is-rolling,.board-svg .home-dice.is-rolling .dice-cube{animation:none}
+}
