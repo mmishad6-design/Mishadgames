@@ -295,8 +295,21 @@ export default function App(){
   return()=>{if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current)};
  },[started,current?.ai,turn,dice,choices,busy,champion,passPending,players]);
  useEffect(()=>()=>clearTimers(),[]);
+ const scheduleReconnect=(immediate=false)=>{
+  if(!activeRoomCode||mode!=="online"||!navigator.onLine||reconnectTimerRef.current!==undefined)return;
+  const attempt=reconnectAttemptsRef.current++;
+  const delay=immediate?300:Math.min(1000*Math.pow(2,Math.min(attempt,4)),15000);
+  reconnectTimerRef.current=window.setTimeout(()=>{
+   reconnectTimerRef.current=undefined;
+   if(document.visibilityState==="visible"&&navigator.onLine)setReconnectKey(value=>value+1);
+  },delay);
+ };
  useEffect(()=>{
-  if(!activeRoomCode||mode!=="online")return;
+  if(!activeRoomCode||mode!=="online"){
+   if(reconnectTimerRef.current!==undefined)window.clearTimeout(reconnectTimerRef.current);
+   reconnectTimerRef.current=undefined;reconnectAttemptsRef.current=0;
+   return;
+  }
   let cancelled=false;
   const refreshRoom=async()=>{
    const {data,error}=await supabase.rpc("ludo_get_room",{p_code:activeRoomCode,p_token:getOnlineToken()});
@@ -324,25 +337,48 @@ export default function App(){
     const connected=Object.values(state).flat().flatMap(meta=>Array.isArray(meta.playerIndices)?meta.playerIndices:[meta.playerIndex]).filter(index=>Number.isInteger(index));
     setOnlinePlayers(Array.from(new Set(connected)));
     setPresenceReady(true);
+    setOnlineError("");
    })
    .subscribe(status=>{
+    if(cancelled)return;
     if(status==="SUBSCRIBED"){
+     reconnectAttemptsRef.current=0;
+     if(reconnectTimerRef.current!==undefined)window.clearTimeout(reconnectTimerRef.current);
+     reconnectTimerRef.current=undefined;
+     setOnlineError("");
      void refreshRoom();
      void channel.track({playerIndex:onlineIndex,playerIndices:onlineSeatIndices,name:onlineName.trim(),onlineAt:new Date().toISOString()});
     }
-    else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+    else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+     setPresenceReady(false);setOnlinePlayers([]);
      setOnlineError("Room connection interrupted. Reconnecting…");
+     scheduleReconnect(false);
     }
    });
-  return()=>{cancelled=true;if(roomChannelRef.current===channel)roomChannelRef.current=null;void supabase.removeChannel(channel);};
+  return()=>{
+   cancelled=true;
+   if(reconnectTimerRef.current!==undefined)window.clearTimeout(reconnectTimerRef.current);
+   reconnectTimerRef.current=undefined;
+   if(roomChannelRef.current===channel)roomChannelRef.current=null;
+   void supabase.removeChannel(channel);
+  };
  },[activeRoomCode,mode,reconnectKey,onlineIndex,onlineName]);
  useEffect(()=>{
   if(!activeRoomCode||mode!=="online")return;
-  const reconnect=()=>{if(document.visibilityState==="visible"&&navigator.onLine){setOnlineError("");setReconnectKey(value=>value+1);}};
+  const reconnect=()=>{
+   if(document.visibilityState!=="visible"||!navigator.onLine)return;
+   const now=Date.now();
+   if(now-lastReconnectAtRef.current<1500)return;
+   lastReconnectAtRef.current=now;
+   setOnlineError("Network restored. Reconnecting…");
+   scheduleReconnect(true);
+  };
+  const offline=()=>{setPresenceReady(false);setOnlinePlayers([]);setOnlineError("You are offline. Waiting for network…");};
   window.addEventListener("online",reconnect);
+  window.addEventListener("offline",offline);
   window.addEventListener("pageshow",reconnect);
   document.addEventListener("visibilitychange",reconnect);
-  return()=>{window.removeEventListener("online",reconnect);window.removeEventListener("pageshow",reconnect);document.removeEventListener("visibilitychange",reconnect);};
+  return()=>{window.removeEventListener("online",reconnect);window.removeEventListener("offline",offline);window.removeEventListener("pageshow",reconnect);document.removeEventListener("visibilitychange",reconnect);};
  },[activeRoomCode,mode]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-history",JSON.stringify(matchHistory));}catch{/* History remains available for this session if storage is unavailable. */}},[matchHistory]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-theme",theme);}catch{/* Theme remains available for this session if storage is unavailable. */}},[theme]);
@@ -384,7 +420,7 @@ export default function App(){
      {onlineIndex!==0&&<div className="reset-actions"><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(true)}>ACCEPT RESET</button><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(false)}>DECLINE</button></div>}
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
-   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
+   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button>{mode==="online"&&<span style={{fontSize:"12px",fontWeight:700,color:presenceReady?"#27835a":"#b7791f"}}>{presenceReady?"● Connected":"● Reconnecting…"}{onlineError&&<small style={{display:"block",fontWeight:500}}>{onlineError}</small>}</span>}{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
    <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(!onlineSeatIndices.includes(turn)||resetRequest?.status==="pending")?[]:choices} dice={dice} lastDice={lastDice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineSeatIndices.includes(turn))} onRoll={()=>void rollDice()} onMove={moveSelected} animatedToken={animatedToken}/></div>
     
    </div>
