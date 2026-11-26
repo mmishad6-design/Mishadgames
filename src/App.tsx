@@ -243,7 +243,7 @@ export default function App(){
   }
   nextTurn(result.players);
  };
- useEffect(()=>{if(autoMoveIndex===null||dice===null||!choices.includes(autoMoveIndex)||!started||champion||busy||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;const timer=window.setTimeout(()=>{moveSelected(autoMoveIndex);setAutoMoveIndex(null);},700);return()=>window.clearTimeout(timer);},[autoMoveIndex,dice,choices,started,champion,busy,resetRequest?.status,mode,onlineIndex,turn,players]);
+ useEffect(()=>{if(autoMoveIndex===null||dice===null||!choices.includes(autoMoveIndex)||!started||champion||busy||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;const timer=window.setTimeout(()=>{moveSelected(autoMoveIndex);setAutoMoveIndex(null);},700);return()=>window.clearTimeout(timer);},[autoMoveIndex,dice,choices,started,champion,busy,resetRequest?.status,mode,onlineSeatIndices,turn,players]);
  useEffect(()=>{
   if(!started||mode==="online"||!current?.ai||champion||busy||passPending)return;
   aiTimer.current=window.setTimeout(()=>{
