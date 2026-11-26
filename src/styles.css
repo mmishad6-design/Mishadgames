@@ -193,3 +193,18 @@
 .board-svg .home-dice .dice-cube{transform-origin:0 0}
 .board-svg .home-dice.is-clickable:hover .dice-cube{filter:brightness(1.035) saturate(1.08)}
 @media(max-width:600px){.board-svg .token-piece{filter:drop-shadow(0 3px 2px #17251f66)}}
+
+/* Dice roll animation: rotate the complete beveled cube while keeping all face pips attached. */
+.board-svg .home-dice{perspective:700px}
+.board-svg .home-dice.is-rolling .dice-cube{
+ transform-box:fill-box;
+ transform-origin:center;
+ animation:diceCubeTumble .48s cubic-bezier(.25,.7,.25,1);
+}
+@keyframes diceCubeTumble{
+ 0%{transform:rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.94)}
+ 38%{transform:rotateX(145deg) rotateY(165deg) rotateZ(95deg) scale(1.08)}
+ 72%{transform:rotateX(285deg) rotateY(285deg) rotateZ(215deg) scale(1.02)}
+ 100%{transform:rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
+}
+@media(prefers-reduced-motion:reduce){.board-svg .home-dice.is-rolling .dice-cube{animation:none}}
