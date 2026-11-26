@@ -89,7 +89,7 @@ function Board({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove
     <path d="M27 -21 L36 -30 L36 13 L27 22 Z" fill="#ffffff" opacity=".13"/>
    </g>
    {rolling?<text x="-4" y="4" textAnchor="middle" dominantBaseline="central" fontSize="35" fontWeight="800" fill="#244a3e">…</text>:<>
-    {faceDots(faceLayout[displayValue].top).map(([nx,ny],dot)=><g key={"top"+dot}><ellipse cx={-4+nx*17+ny*5} cy={-36+ny*4.5} rx="3.4" ry="2.1" fill="#142b22" opacity=".25"/><ellipse cx={-4+nx*17+ny*5} cy={-36+ny*4.5} rx="2.9" ry="1.8" fill="#183c30"/><ellipse cx={-5+nx*17+ny*5} cy={-37+ny*4.5} rx="1" ry=".65" fill="#ffffff" opacity=".32"/></g>)}
+    {faceDots(faceLayout[displayValue].top).map(([nx,ny],dot)=><g key={"top"+dot}><ellipse cx={5+nx*14+ny*4} cy={-34+ny*4.5} rx="3.4" ry="2.1" fill="#142b22" opacity=".25"/><ellipse cx={5+nx*14+ny*4} cy={-34+ny*4.5} rx="2.9" ry="1.8" fill="#183c30"/><ellipse cx={4+nx*14+ny*4} cy={-35+ny*4.5} rx="1" ry=".65" fill="#ffffff" opacity=".32"/></g>)}
     {faceDots(faceLayout[displayValue].side).map(([nx,ny],dot)=><g key={"side"+dot}><ellipse cx={33+nx*3.1-ny*4.2} cy={-4+ny*17} rx="2.2" ry="3.2" fill="#17271f" opacity=".3"/><ellipse cx={33+nx*3.1-ny*4.2} cy={-4+ny*17} rx="1.8" ry="2.8" fill="#183c30"/><ellipse cx={32.5+nx*3.1-ny*4.2} cy={-5+ny*17} rx=".65" ry="1.1" fill="#ffffff" opacity=".3"/></g>)}
     {DICE_DOTS[displayValue].map(([dx,dy],dot)=><g key={"front"+dot} transform="translate(-4 4)"><ellipse cx={dx} cy={dy+1.8} rx="6.9" ry="6.3" fill="#0d281f" opacity=".18"/><circle cx={dx} cy={dy} r="6.7" fill="url(#homeDicePip)"/><ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".3"/></g>)}
    </>}
@@ -271,12 +271,12 @@ export default function App(){
     playSound(result.captured>0?"capture":"move");
     if(winner(result.players[turn])){
      playSound("win");
-     setChampion(current.name);setMessage(current.name+" wins the game!");setDice(null);setChoices([]);if(mode==="online")void syncOnlineState({players:result.players,turn,dice:null,choices:[],message:current.name+" wins the game!",champion:current.name,started:true});
+     setChampion(current.name);setMessage(current.name+" wins the game!");setDice(null);setChoices([]);if(mode==="online")void syncOnlineState({players:result.players,turn,dice:null,lastDice,choices:[],message:current.name+" wins the game!",champion:current.name,started:true});
      setMatchHistory(history=>[{id:Date.now(),date:new Date().toISOString(),mode,players:result.players.map(player=>player.name),winner:current.name},...history].slice(0,50));
      return;
     }
     if(rolled===6||result.captured>0||result.finished){
-     const msg=result.finished?"Token reached the centre! You get another turn.":result.captured>0?"Captured "+result.captured+" opponent token"+(result.captured>1?"s":"")+"! You get another turn.":"Six! You get another turn.";setDice(null);setChoices([]);setMessage(msg);if(mode==="online")void syncOnlineState({players:result.players,turn,dice:null,choices:[],message:msg,champion:null,started:true});
+     const msg=result.finished?"Token reached the centre! You get another turn.":result.captured>0?"Captured "+result.captured+" opponent token"+(result.captured>1?"s":"")+"! You get another turn.":"Six! You get another turn.";setDice(null);setChoices([]);setMessage(msg);if(mode==="online")void syncOnlineState({players:result.players,turn,dice:null,lastDice,choices:[],message:msg,champion:null,started:true});
      return;
     }
     nextTurn(result.players);
