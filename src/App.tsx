@@ -12,7 +12,10 @@ const DICE_DOTS:Record<number,[number,number][]> = {
   4:[[-14,-14],[14,-14],[-14,14],[14,14]],5:[[-14,-14],[14,-14],[0,0],[-14,14],[14,14]],
   6:[[-14,-14],[14,-14],[-14,0],[14,0],[-14,14],[14,14]]
 };
-function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove,animatedToken}:{players:Player[];turn:number;choices:number[];dice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null}){
+function Board({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null}){
+ const displayValue=dice??lastDice??5;
+ const faceLayout:Record<number,{top:number;side:number}>={1:{top:2,side:3},2:{top:1,side:4},3:{top:1,side:5},4:{top:2,side:6},5:{top:3,side:1},6:{top:4,side:2}};
+ const faceDots=(value:number)=>DICE_DOTS[value].map(([x,y])=>[x/14,y/14] as [number,number]);
  const pieces=players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:animatedToken?.playerIndex===playerIndex&&animatedToken.tokenIndex===tokenIndex?animatedToken.pos:tokenPosition(player.color,token,tokenIndex),animating:animatedToken?.playerIndex===playerIndex&&animatedToken.tokenIndex===tokenIndex})));
  return <svg className="board-svg" viewBox="0 0 600 600" role="img" aria-label="Classic Ludo board">
   <defs>
@@ -73,7 +76,7 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove,animated
    className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
    transform={`translate(${base.x*40+(color==="red"||color==="blue"?210:30)},${base.y*40+(color==="red"||color==="green"?210:30)})`}
    role={canRoll?"button":undefined} tabIndex={canRoll?0:undefined}
-   aria-label={canRoll?"Click to roll dice":dice===null?"Waiting for dice roll":"Dice shows "+dice}
+   aria-label={canRoll?"Click to roll dice":"Dice shows "+displayValue}
    onClick={canRoll?onRoll:undefined}
    onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}>
    <g filter="url(#homeDiceShadow)" className="dice-cube">
@@ -84,7 +87,12 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove,animated
     <path d="M-25 -26 L16 -26" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" opacity=".9"/>
     <path d="M-27 29 Q-2 33 19 28" fill="none" stroke="#bdb5a5" strokeWidth="1.4" opacity=".75"/>
     <path d="M27 -21 L36 -30 L36 13 L27 22 Z" fill="#ffffff" opacity=".13"/>
-   </g>   {rolling?<text x="-4" y="4" textAnchor="middle" dominantBaseline="central" fontSize="35" fontWeight="800" fill="#244a3e">…</text>:(DICE_DOTS[dice??5]).map(([dx,dy],dot)=><g key={dot} transform="translate(-4 4)"><ellipse cx={dx} cy={dy+1.8} rx="6.9" ry="6.3" fill="#0d281f" opacity=".18"/><circle cx={dx} cy={dy} r="6.7" fill="url(#homeDicePip)"/><ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".3"/></g>)}
+   </g>
+   {rolling?<text x="-4" y="4" textAnchor="middle" dominantBaseline="central" fontSize="35" fontWeight="800" fill="#244a3e">…</text>:<>
+    {faceDots(faceLayout[displayValue].top).map(([nx,ny],dot)=><g key={"top"+dot}><ellipse cx={-4+nx*17+ny*5} cy={-36+ny*4.5} rx="3.4" ry="2.1" fill="#142b22" opacity=".25"/><ellipse cx={-4+nx*17+ny*5} cy={-36+ny*4.5} rx="2.9" ry="1.8" fill="#183c30"/><ellipse cx={-5+nx*17+ny*5} cy={-37+ny*4.5} rx="1" ry=".65" fill="#ffffff" opacity=".32"/></g>)}
+    {faceDots(faceLayout[displayValue].side).map(([nx,ny],dot)=><g key={"side"+dot}><ellipse cx={33+nx*3.1-ny*4.2} cy={-4+ny*17} rx="2.2" ry="3.2" fill="#17271f" opacity=".3"/><ellipse cx={33+nx*3.1-ny*4.2} cy={-4+ny*17} rx="1.8" ry="2.8" fill="#183c30"/><ellipse cx={32.5+nx*3.1-ny*4.2} cy={-5+ny*17} rx=".65" ry="1.1" fill="#ffffff" opacity=".3"/></g>)}
+    {DICE_DOTS[displayValue].map(([dx,dy],dot)=><g key={"front"+dot} transform="translate(-4 4)"><ellipse cx={dx} cy={dy+1.8} rx="6.9" ry="6.3" fill="#0d281f" opacity=".18"/><circle cx={dx} cy={dy} r="6.7" fill="url(#homeDicePip)"/><ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".3"/></g>)}
+   </>}
   </g>;})()}
  </svg>;
 }
@@ -148,7 +156,7 @@ export default function App(){
  const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
   try{return JSON.parse(localStorage.getItem("mishads-ludo-history")||"[]") as MatchRecord[];}catch{return [];}
  });
- const [dice,setDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[autoMoveIndex,setAutoMoveIndex]=useState<number|null>(null),[,setMessage]=useState("Roll the dice to begin.");const [animatedToken,setAnimatedToken]=useState<{playerIndex:number;tokenIndex:number;pos:[number,number]}|null>(null);
+ const [dice,setDice]=useState<number|null>(null),[lastDice,setLastDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[autoMoveIndex,setAutoMoveIndex]=useState<number|null>(null),[,setMessage]=useState("Roll the dice to begin.");const [animatedToken,setAnimatedToken]=useState<{playerIndex:number;tokenIndex:number;pos:[number,number]}|null>(null);
  const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
  const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined),tokenMoveTimer=useRef<number|undefined>(undefined);
  const audioContext=useRef<AudioContext|null>(null);
@@ -171,7 +179,7 @@ export default function App(){
   }catch{/* Audio is optional; gameplay must never depend on it. */}
  };
  const current=players[turn];
- const applyOnlineState=(state:any)=>{if(!state)return;const nextPlayers=state.players||[];const nextTurn=Number(state.turn||0);const nextDice=state.dice??null;setPlayers(nextPlayers);setTurn(nextTurn);setDice(nextDice);setChoices(state.choices?.length?state.choices:(nextDice!==null&&nextPlayers[nextTurn]?legalTokens(nextPlayers[nextTurn],Number(nextDice),nextPlayers):[]));setMessage(state.message||"Online match");setChampion(state.champion??null);setStarted(!!state.started);setResetRequest(state.resetRequest??null);setBusy(false);setPassPending(false);};
+ const applyOnlineState=(state:any)=>{if(!state)return;const nextPlayers=state.players||[];const nextTurn=Number(state.turn||0);const nextDice=state.dice??null;setPlayers(nextPlayers);setTurn(nextTurn);setDice(nextDice);setLastDice(state.lastDice??nextDice??null);setChoices(state.choices?.length?state.choices:(nextDice!==null&&nextPlayers[nextTurn]?legalTokens(nextPlayers[nextTurn],Number(nextDice),nextPlayers):[]));setMessage(state.message||"Online match");setChampion(state.champion??null);setStarted(!!state.started);setResetRequest(state.resetRequest??null);setBusy(false);setPassPending(false);};
  const syncOnlineState=async(state:any)=>{if(mode!=="online"||!activeRoomCode)return;const {error}=await supabase.rpc("ludo_update_state",{p_code:activeRoomCode,p_token:getOnlineToken(),p_state:state});if(error){setOnlineError(error.message);return;}applyOnlineState(state);};
  const createOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_create_room",{p_name:onlineName.trim(),p_token:getOnlineToken(),p_player_count:onlinePlayerCount});if(error)throw error;const row=Array.isArray(data)?data[0]:data;const seats=Array.from({length:onlinePlayerCount},(_,i)=>i);setActiveRoomCode(row.room_code);setOnlineIndex(0);setOnlineSeatIndices(seats);localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:row.room_code,playerIndex:0,playerIndices:seats,name:onlineName.trim()}));applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not create room");}finally{setOnlineBusy(false);}};
  const joinOnlineRoom=async()=>{setOnlineBusy(true);setOnlineError("");try{const {data,error}=await supabase.rpc("ludo_join_room",{p_code:joinCode,p_name:onlineName.trim(),p_token:getOnlineToken(),p_player_count:onlinePlayerCount});if(error)throw error;const row=Array.isArray(data)?data[0]:data;const {data:seatData,error:seatError}=await supabase.rpc("ludo_get_my_seats",{p_code:row.room_code,p_token:getOnlineToken()});if(seatError)throw seatError;const seats=(seatData||[row.your_index]) as number[];setActiveRoomCode(row.room_code);setOnlineIndex(row.your_index);setOnlineSeatIndices(seats);localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:row.room_code,playerIndex:row.your_index,playerIndices:seats,name:onlineName.trim()}));applyOnlineState(row.room_state);}catch(e){setOnlineError(e instanceof Error?e.message:"Could not join room");}finally{setOnlineBusy(false);}};
@@ -199,7 +207,7 @@ export default function App(){
 
 
   const clearTimers=()=>{if(rollTimer.current!==undefined)window.clearTimeout(rollTimer.current);if(passTimer.current!==undefined)window.clearTimeout(passTimer.current);if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current);if(tokenMoveTimer.current!==undefined)window.clearTimeout(tokenMoveTimer.current);setAnimatedToken(null);};
- const resetGame=()=>{clearTimers();setAutoMoveIndex(null);setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
+ const resetGame=()=>{clearTimers();setAutoMoveIndex(null);setPlayers(createPlayers(count,mode,playerNames));setTurn(0);setDice(null);setLastDice(null);setChoices([]);setMessage("Roll the dice to begin.");setChampion(null);setBusy(false);setPassPending(false);setStarted(true);};
  const exitOnlineRoom=async()=>{
   if(activeRoomCode&&roomChannelRef.current){
    const channel=roomChannelRef.current;
@@ -213,10 +221,10 @@ export default function App(){
   setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");
  };
  const backToSetup=()=>{clearTimers();setAutoMoveIndex(null);if(mode==="online")void exitOnlineRoom();setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
- const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();setAutoMoveIndex(null);const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
+ const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();setAutoMoveIndex(null);const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,lastDice,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
  const rollDice=async()=>{
   if(!started||!current||dice!==null||busy||champion||passPending||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;
-  if(mode==="online"){setBusy(true);const {data,error}=await supabase.rpc("ludo_roll_dice",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error){setOnlineError(error.message);setBusy(false);return;}const rolled=Number(data);const legal=legalTokens(current,rolled,players);setBusy(false);if(!legal.length){if(rolled===6){void syncOnlineState({players,turn,dice:null,choices:[],message:"Six! No token can move. Roll again.",champion:null,started:true});}else{setPassPending(true);void syncOnlineState({players,turn:(turn+1)%players.length,dice:null,choices:[],message:"No legal move. Turn passes.",champion:null,started:true});}return;}setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)setAutoMoveIndex(autoIndex);return;}
+  if(mode==="online"){setBusy(true);const {data,error}=await supabase.rpc("ludo_roll_dice",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error){setOnlineError(error.message);setBusy(false);return;}const rolled=Number(data);const legal=legalTokens(current,rolled,players);setBusy(false);setLastDice(rolled);if(!legal.length){if(rolled===6){void syncOnlineState({players,turn,dice:null,lastDice:rolled,choices:[],message:"Six! No token can move. Roll again.",champion:null,started:true});}else{setPassPending(true);void syncOnlineState({players,turn:(turn+1)%players.length,dice:null,lastDice:rolled,choices:[],message:"No legal move. Turn passes.",champion:null,started:true});}return;}setDice(rolled);setChoices(legal);void syncOnlineState({players,turn,dice:rolled,lastDice:rolled,choices:legal,message:rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.",champion:null,started:true});const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)setAutoMoveIndex(autoIndex);return;}
   setBusy(true);
   playSound("roll");
   // Use an unbiased cryptographic roll: reject the four excess uint32 values
@@ -231,6 +239,7 @@ export default function App(){
   const rolled = (randomValue % 6) + 1;
   rollTimer.current=window.setTimeout(()=>{
    setBusy(false);
+   setLastDice(rolled);
    const legal=legalTokens(current,rolled,players);
    if(legal.length===0){
     setDice(null);setChoices([]);
@@ -376,7 +385,7 @@ export default function App(){
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
-   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(!onlineSeatIndices.includes(turn)||resetRequest?.status==="pending")?[]:choices} dice={dice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineSeatIndices.includes(turn))} onRoll={()=>void rollDice()} onMove={moveSelected} animatedToken={animatedToken}/></div>
+   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(!onlineSeatIndices.includes(turn)||resetRequest?.status==="pending")?[]:choices} dice={dice} lastDice={lastDice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineSeatIndices.includes(turn))} onRoll={()=>void rollDice()} onMove={moveSelected} animatedToken={animatedToken}/></div>
     
    </div>
   </section>}
