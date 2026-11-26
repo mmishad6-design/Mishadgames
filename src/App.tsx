@@ -19,6 +19,11 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove,animated
    <linearGradient id="homeDiceFace" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0" stopColor="#ffffff"/><stop offset=".58" stopColor="#fffefa"/><stop offset="1" stopColor="#e9e4d8"/></linearGradient>
    <radialGradient id="homeDicePip" cx="28%" cy="24%" r="78%"><stop offset="0" stopColor="#49665b"/><stop offset=".42" stopColor="#244a3e"/><stop offset="1" stopColor="#102c23"/></radialGradient>
    <filter id="homeDiceShadow" x="-25%" y="-25%" width="150%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/><feOffset dy="2.5"/><feComponentTransfer><feFuncA type="linear" slope=".25"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <radialGradient id="tokenRed" cx="28%" cy="22%" r="78%"><stop offset="0" stopColor="#ffb0a0"/><stop offset=".35" stopColor="#ed6c68"/><stop offset="1" stopColor="#a92e3b"/></radialGradient>
+   <radialGradient id="tokenGreen" cx="28%" cy="22%" r="78%"><stop offset="0" stopColor="#a7f2c1"/><stop offset=".35" stopColor="#38b982"/><stop offset="1" stopColor="#126143"/></radialGradient>
+   <radialGradient id="tokenYellow" cx="28%" cy="22%" r="78%"><stop offset="0" stopColor="#fff0a8"/><stop offset=".35" stopColor="#f2c64e"/><stop offset="1" stopColor="#b47a20"/></radialGradient>
+   <radialGradient id="tokenBlue" cx="28%" cy="22%" r="78%"><stop offset="0" stopColor="#b6dcff"/><stop offset=".35" stopColor="#5b9ddd"/><stop offset="1" stopColor="#28578e"/></radialGradient>
+   <filter id="token3dShadow" x="-60%" y="-60%" width="220%" height="240%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.8"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".42"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
   <rect width="600" height="600" fill="var(--board-surface)"/>
   {COLORS.map(color=>{const base=BASES[color];return <g key={color}>
@@ -50,7 +55,14 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove,animated
    const inHome=piece.player.tokens[piece.tokenIndex].progress===-1;
    const tokenOffset=inHome&&!piece.animating?0:20;
    return <g key={piece.player.color+piece.tokenIndex} className={"token-piece"+(piece.animating?" token-moving":"")+(selectable?" token-selectable":"")} transform={`translate(${x*40+tokenOffset+dx},${y*40+tokenOffset+dy})`} onClick={()=>selectable&&onMove(piece.tokenIndex)} onKeyDown={event=>{if(selectable&&(event.key==="Enter"||event.key===" ")){event.preventDefault();onMove(piece.tokenIndex)}}} tabIndex={selectable?0:-1} role={selectable?"button":undefined} aria-label={selectable?`Move ${piece.player.color} token ${piece.tokenIndex+1}`:undefined} style={{cursor:selectable?"pointer":"default"}}>
-    <circle r="14" fill={PALETTE[piece.player.color]} stroke="#fff" strokeWidth="3"/><circle r="9" fill="none" stroke="#ffffff99"/><text y="3.5" textAnchor="middle" fontSize="9" fontWeight="800" fill="#fff">{piece.tokenIndex+1}</text>
+    <ellipse cy="4" rx="14.5" ry="10" fill="#17251f" opacity=".24"/>
+    <g filter="url(#token3dShadow)">
+     <circle cy="1.5" r="14" fill="#17251f" opacity=".28"/>
+     <circle r="14" fill={`url(#token${piece.player.color[0].toUpperCase()+piece.player.color.slice(1)})`} stroke="#fff7e7" strokeWidth="2.4"/>
+     <circle r="10.7" fill="none" stroke="#ffffff88" strokeWidth="1.1"/>
+     <ellipse cx="-4" cy="-6.5" rx="5.2" ry="2.8" transform="rotate(-28 -4 -6.5)" fill="#fff" opacity=".48"/>
+     <text y="3.5" textAnchor="middle" fontSize="9" fontWeight="900" fill="#fff" stroke="#24352d" strokeOpacity=".22" strokeWidth=".8">{piece.tokenIndex+1}</text>
+    </g>
     {selectable&&<circle r="18" fill="none" stroke="#bd9654" strokeWidth="2" strokeDasharray="3 3"/>}
    </g>;
   })}
@@ -62,9 +74,12 @@ function Board({players,turn,choices,dice,rolling,canRoll,onRoll,onMove,animated
    onClick={canRoll?onRoll:undefined}
    onKeyDown={canRoll?(event:any)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onRoll();}}:undefined}>
    <g filter="url(#homeDiceShadow)">
+    <path d="M-36 -27 L-29 -34 L43 -34 L36 -27 Z" fill="#c9c2b4"/>
+    <path d="M36 -27 L43 -34 L43 38 L36 36 Z" fill="#b7ae9d"/>
     <rect x="-36" y="-36" width="72" height="72" rx="15" fill="url(#homeDiceFace)" stroke={canRoll?"#244a3e":"#887d69"} strokeWidth={canRoll?"2.8":"2"}/>
-    <rect x="-31.5" y="-31.5" width="63" height="63" rx="11.5" fill="none" stroke="#ffffff" strokeOpacity=".82" strokeWidth="1.4"/>
-    <path d="M-22 -27 Q0 -33 22 -27" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity=".9"/>
+    <rect x="-31.5" y="-31.5" width="63" height="63" rx="11.5" fill="none" stroke="#ffffff" strokeOpacity=".9" strokeWidth="1.4"/>
+    <path d="M-22 -27 Q0 -33 22 -27" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" opacity=".95"/>
+    <path d="M-29 29 Q0 34 29 29" fill="none" stroke="#bdb5a5" strokeWidth="1.3" opacity=".55"/>
    </g>
    {rolling?<text textAnchor="middle" dominantBaseline="central" fontSize="37" fontWeight="800" fill="#244a3e">…</text>:(DICE_DOTS[dice??5]).map(([dx,dy],dot)=><g key={dot}><circle cx={dx} cy={dy} r="7.5" fill="url(#homeDicePip)"/><ellipse cx={dx-2} cy={dy-2.2} rx="1.7" ry="1.2" fill="#ffffff" opacity=".22"/></g>)}
   </g>;})()}
