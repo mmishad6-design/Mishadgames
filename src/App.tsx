@@ -265,7 +265,7 @@ export default function App(){
    if(cancelled)return;
    if(seatError){setOnlineError(seatError.message);return;}
    const seats=(seatData||[row?.your_index??onlineIndex]) as number[];
-   setOnlineSeatIndices(seats);
+   setOnlineSeatIndices(current=>current.length===seats.length&&current.every((seat,index)=>seat===seats[index])?current:seats);
    localStorage.setItem("mishads-ludo-online-session",JSON.stringify({roomCode:activeRoomCode,playerIndex:row?.your_index??onlineIndex,playerIndices:seats,name:onlineName.trim()}));
    if(row?.room_state)applyOnlineState(row.room_state);
   };
@@ -293,7 +293,7 @@ export default function App(){
     }
    });
   return()=>{cancelled=true;if(roomChannelRef.current===channel)roomChannelRef.current=null;void supabase.removeChannel(channel);};
- },[activeRoomCode,mode,reconnectKey,onlineIndex,onlineSeatIndices,onlineName]);
+ },[activeRoomCode,mode,reconnectKey,onlineIndex,onlineName]);
  useEffect(()=>{
   if(!activeRoomCode||mode!=="online")return;
   const reconnect=()=>{if(document.visibilityState==="visible"&&navigator.onLine){setOnlineError("");setReconnectKey(value=>value+1);}};
