@@ -148,26 +148,40 @@
 .token-piece.token-moving{transition:transform 145ms linear}
 
 
-/* Hybrid 3D finish: raised board, dimensional pieces and dice. */
+/* Stronger hybrid 3D board perspective and raised game pieces. */
 .board-frame{
- perspective:1100px;
- background:linear-gradient(145deg,#f0e2c3 0%,#c5ae82 58%,#9d8966 100%);
- box-shadow:0 24px 48px #0006, inset 0 2px 3px #fff9, inset 0 -5px 9px #5d4c3038;
+ perspective:1250px;
+ background:linear-gradient(155deg,#f6e7c8 0%,#cbb38a 48%,#887454 100%);
+ border:1px solid #9c8052;
+ box-shadow:0 28px 52px #0008,inset 0 3px 4px #fff9,inset 0 -8px 12px #57452d55;
 }
 .board-svg{
- transform:rotateX(1.25deg);
- transform-origin:center bottom;
- box-shadow:0 10px 18px #17251f35,inset 0 0 0 2px #fff9;
+ transform:rotateX(7deg) rotateZ(-.8deg);
+ transform-origin:center 58%;
+ box-shadow:0 22px 24px #17251f55,0 4px 0 #75664b,0 8px 0 #534832,inset 0 0 0 3px #fff9;
+ backface-visibility:hidden;
 }
-.board-svg .token-piece{filter:drop-shadow(0 2px 2px #17251f35)}
-.board-svg .token-piece.token-moving{filter:drop-shadow(0 5px 4px #17251f55)}
-.board-svg .home-dice{transform-style:preserve-3d}
-.board-svg .home-dice.is-clickable{filter:drop-shadow(0 4px 3px #17251f45)}
+.board-svg .token-piece{filter:drop-shadow(0 4px 3px #17251f55)}
+.board-svg .token-piece.token-moving{filter:drop-shadow(0 7px 5px #17251f77)}
+.board-svg .home-dice{transform-style:preserve-3d;filter:drop-shadow(4px 7px 3px #17251f55)}
+.board-svg .home-dice.is-clickable:hover{filter:drop-shadow(5px 9px 4px #17251f66)}
+.board-svg .home-dice.is-rolling{animation:homeDice3DRoll .48s cubic-bezier(.3,.1,.4,1)}
+@keyframes homeDice3DRoll{
+ 0%{filter:drop-shadow(2px 3px 2px #17251f55);opacity:1}
+ 25%{filter:drop-shadow(9px 13px 5px #17251f66);opacity:.9}
+ 50%{filter:drop-shadow(-4px 8px 4px #17251f66)}
+ 75%{filter:drop-shadow(7px 10px 4px #17251f66)}
+ 100%{filter:drop-shadow(4px 7px 3px #17251f55)}
+}
 .app-shell[data-theme="dark"] .board-frame{
- background:linear-gradient(145deg,#56645a 0%,#34463f 58%,#263631 100%);
- box-shadow:0 24px 48px #0008,inset 0 2px 3px #ffffff20,inset 0 -5px 9px #0005;
+ background:linear-gradient(155deg,#69796c 0%,#3b5148 48%,#263631 100%);
+ box-shadow:0 28px 52px #000a,inset 0 3px 4px #ffffff30,inset 0 -8px 12px #0007;
 }
 .app-shell[data-theme="dark"] .board-svg{
- box-shadow:0 10px 18px #0006,inset 0 0 0 2px #ffffff20;
+ box-shadow:0 22px 24px #0008,0 4px 0 #24332d,0 8px 0 #17231f,inset 0 0 0 3px #ffffff22;
+}
+@media(max-width:600px){
+ .board-frame{padding:9px;perspective:950px}
+ .board-svg{transform:rotateX(5.5deg) rotateZ(-.5deg)}
 }
 @media(prefers-reduced-motion:reduce){.board-svg{transform:none}}
