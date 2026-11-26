@@ -236,3 +236,15 @@
 @media(prefers-reduced-motion:reduce){
  .board-svg .home-dice.is-rolling,.board-svg .home-dice.is-rolling .dice-cube{animation:none}
 }
+
+
+/* Brief impact burst when a token is captured. */
+.capture-burst{transform-box:fill-box;transform-origin:center;animation:captureBurst .88s cubic-bezier(.16,.75,.25,1) both}
+.capture-ring{fill:none;stroke:#fff1b8;stroke-width:2.5;filter:drop-shadow(0 0 4px #f5bd55);animation:captureRing .78s ease-out both}
+.capture-rays{fill:none;stroke:#ffe4a0;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 3px #d99537);animation:captureRays .78s ease-out both}
+.capture-star{font-size:18px;font-weight:900;fill:#fff8d8;paint-order:stroke;stroke:#a86a25;stroke-width:1.5;filter:drop-shadow(0 1px 3px #6b421f);animation:captureStar .78s ease-out both}
+@keyframes captureBurst{0%{opacity:0;transform:scale(.2)}18%{opacity:1;transform:scale(1.15)}70%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes captureRing{0%{r:2;opacity:0}18%{opacity:1}100%{r:25;opacity:0}}
+@keyframes captureRays{0%{opacity:0;stroke-width:1;transform:scale(.35)}25%{opacity:1}100%{opacity:0;stroke-width:1;transform:scale(1.35)}}
+@keyframes captureStar{0%{opacity:0;transform:scale(.2) rotate(-35deg)}25%{opacity:1;transform:scale(1.2) rotate(12deg)}100%{opacity:0;transform:scale(.65) rotate(35deg)}}
+@media(prefers-reduced-motion:reduce){.capture-burst,.capture-ring,.capture-rays,.capture-star{animation:none;opacity:0}}
