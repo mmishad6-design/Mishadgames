@@ -185,3 +185,11 @@
  .board-svg{transform:rotateX(5.5deg) rotateZ(-.5deg)}
 }
 @media(prefers-reduced-motion:reduce){.board-svg{transform:none}}
+
+
+/* Taller classic pawn tokens and a polished beveled 3D dice cube. */
+.board-svg .token-piece{filter:drop-shadow(0 5px 3px #17251f66)}
+.board-svg .token-piece.token-moving{filter:drop-shadow(0 8px 5px #17251f88)}
+.board-svg .home-dice .dice-cube{transform-origin:0 0}
+.board-svg .home-dice.is-clickable:hover .dice-cube{filter:brightness(1.035) saturate(1.08)}
+@media(max-width:600px){.board-svg .token-piece{filter:drop-shadow(0 3px 2px #17251f66)}}
