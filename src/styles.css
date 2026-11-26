@@ -138,3 +138,9 @@
 .board-svg .home-dice.is-clickable:focus-visible rect{stroke:#d6ad56;stroke-width:3}
 .board-svg .home-dice.is-rolling{animation:homeDiceShake .42s ease-in-out}
 @keyframes homeDiceShake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-9deg)}50%{transform:translate(2px,-1px) rotate(8deg)}75%{transform:translate(-1px,1px) rotate(-5deg)}}
+
+
+/* Hybrid online multiplayer: choose how many seats this phone controls. */
+.online-seat-select{margin:8px 0 4px;cursor:pointer}
+.online-seat-hint{margin:-1px 0 14px;color:#879084;font-size:11px;line-height:1.5}
+.app-shell[data-theme="dark"] .online-seat-hint{color:#aab5a9}
