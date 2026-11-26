@@ -278,7 +278,7 @@ export default function App(){
    })
    .on("presence",{event:"sync"},()=>{
     if(cancelled)return;
-    const state=channel.presenceState<{playerIndex:number;name:string}>();
+    const state=channel.presenceState<{playerIndex:number;playerIndices?:number[];name:string}>();
     const connected=Object.values(state).flat().flatMap(meta=>Array.isArray(meta.playerIndices)?meta.playerIndices:[meta.playerIndex]).filter(index=>Number.isInteger(index));
     setOnlinePlayers(Array.from(new Set(connected)));
     setPresenceReady(true);
