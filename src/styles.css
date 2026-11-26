@@ -144,3 +144,5 @@
 .online-seat-select{margin:8px 0 4px;cursor:pointer}
 .online-seat-hint{margin:-1px 0 14px;color:#879084;font-size:11px;line-height:1.5}
 .app-shell[data-theme="dark"] .online-seat-hint{color:#aab5a9}
+
+.token-piece.token-moving{transition:transform 145ms linear}
