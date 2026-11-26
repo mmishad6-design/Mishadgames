@@ -12,7 +12,7 @@ const DICE_DOTS:Record<number,[number,number][]> = {
   4:[[-14,-14],[14,-14],[-14,14],[14,14]],5:[[-14,-14],[14,-14],[0,0],[-14,14],[14,14]],
   6:[[-14,-14],[14,-14],[-14,0],[14,0],[-14,14],[14,14]]
 };
-function Board({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null}){
+function Board({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken,captureEffects}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null;captureEffects:{id:number;x:number;y:number}[]}){
  const displayValue=dice??lastDice??5;
  const faceLayout:Record<number,{top:number;side:number}>={1:{top:2,side:3},2:{top:1,side:4},3:{top:1,side:5},4:{top:2,side:6},5:{top:3,side:1},6:{top:4,side:2}};
  const faceDots=(value:number)=>DICE_DOTS[value].map(([x,y])=>[x/14,y/14] as [number,number]);
@@ -72,6 +72,7 @@ function Board({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove
     {selectable&&<circle r="18" fill="none" stroke="#bd9654" strokeWidth="2" strokeDasharray="3 3"/>}
    </g>;
   })}
+  {captureEffects.map(effect=><g key={effect.id} className="capture-burst" transform={`translate(${effect.x*40+20},${effect.y*40+20})`} pointerEvents="none"><circle r="5" className="capture-ring"/><path d="M0 -19V-12 M13 -13L9 -9 M19 0H12 M13 13L9 9 M0 19V12 M-13 13L-9 9 M-19 0H-12 M-13 -13L-9 -9" className="capture-rays"/><text y="5" textAnchor="middle" className="capture-star">✦</text></g>)}
   {(()=>{const color=players[turn]?.color;if(!color)return null;const base=BASES[color];return <g
    className={`home-dice ${canRoll?"is-clickable":""} ${rolling?"is-rolling":""}`}
    transform={`translate(${base.x*40+(color==="red"||color==="blue"?210:30)},${base.y*40+(color==="red"||color==="green"?210:30)})`}
@@ -157,7 +158,7 @@ export default function App(){
   try{return JSON.parse(localStorage.getItem("mishads-ludo-history")||"[]") as MatchRecord[];}catch{return [];}
  });
  const [dice,setDice]=useState<number|null>(null),[lastDice,setLastDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[autoMoveIndex,setAutoMoveIndex]=useState<number|null>(null),[,setMessage]=useState("Roll the dice to begin.");const [animatedToken,setAnimatedToken]=useState<{playerIndex:number;tokenIndex:number;pos:[number,number]}|null>(null);
- const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
+ const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);const [captureEffects,setCaptureEffects]=useState<{id:number;x:number;y:number}[]>([]);
  const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined),tokenMoveTimer=useRef<number|undefined>(undefined);
  const audioContext=useRef<AudioContext|null>(null);
  const playSound=(kind:"roll"|"move"|"capture"|"win")=>{
@@ -256,6 +257,7 @@ export default function App(){
   const rolled=dice;
   const result=moveToken(players,turn,tokenIndex,rolled);
   if(result.players===players)return;
+  const capturedPositions=players.flatMap((opponent,playerIndex)=>playerIndex===turn?[]:opponent.tokens.flatMap((token,tokenIndex)=>token.progress>=0&&result.players[playerIndex]?.tokens[tokenIndex]?.progress===-1?[tokenPosition(opponent.color,token,tokenIndex)]:[]));
   const originalProgress=current.tokens[tokenIndex].progress;
   const stepsToAnimate=originalProgress===-1?1:rolled;
   const animateStep=(step:number)=>{
@@ -267,6 +269,7 @@ export default function App(){
    }
    tokenMoveTimer.current=window.setTimeout(()=>{
     setAnimatedToken(null);
+    if(capturedPositions.length){const stamp=Date.now();setCaptureEffects(capturedPositions.map(([x,y],index)=>({id:stamp+index,x,y})));window.setTimeout(()=>setCaptureEffects([]),950);}
     setPlayers(result.players);
     playSound(result.captured>0?"capture":"move");
     if(winner(result.players[turn])){
@@ -376,7 +379,7 @@ export default function App(){
    </section>}
 
   </section>:<section className="play-wrap">
-   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={mode==="online"?()=>void requestOnlineReset():resetGame} disabled={mode==="online"&&(onlineIndex!==0||onlineBusy||resetRequest?.status==="pending")}>{mode==="online"?"REQUEST REPLAY":"PLAY AGAIN"} <span>↻</span></button></div></div>}
+   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:24},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-rays" aria-hidden="true"/><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={mode==="online"?()=>void requestOnlineReset():resetGame} disabled={mode==="online"&&(onlineIndex!==0||onlineBusy||resetRequest?.status==="pending")}>{mode==="online"?"REQUEST REPLAY":"PLAY AGAIN"} <span>↻</span></button></div></div>}
    {mode==="online"&&resetRequest&&<div className="reset-request" role="status">
     {resetRequest.status==="pending"?<>
      <b>Host requested a game reset</b>
@@ -385,7 +388,7 @@ export default function App(){
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
    <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div>
-   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(!onlineSeatIndices.includes(turn)||resetRequest?.status==="pending")?[]:choices} dice={dice} lastDice={lastDice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineSeatIndices.includes(turn))} onRoll={()=>void rollDice()} onMove={moveSelected} animatedToken={animatedToken}/></div>
+   <div className="game-layout"><div className="board-frame"><Board players={players} turn={turn} choices={mode==="online"&&(!onlineSeatIndices.includes(turn)||resetRequest?.status==="pending")?[]:choices} dice={dice} lastDice={lastDice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineSeatIndices.includes(turn))} onRoll={()=>void rollDice()} onMove={moveSelected} animatedToken={animatedToken} captureEffects={captureEffects}/></div>
     
    </div>
   </section>}

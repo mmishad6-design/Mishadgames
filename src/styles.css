@@ -12,11 +12,14 @@
 
 
 /* Winner celebration */
-.winner-celebration{position:relative;isolation:isolate;overflow:hidden;margin:0 0 16px;padding:23px 18px;border:1px solid #cdb477;border-radius:13px;background:radial-gradient(ellipse at 50% 0%,#416b55 0,#1c3935 65%,#172c2d 100%);box-shadow:0 12px 30px #0004;text-align:center;animation:winnerEnter .45s cubic-bezier(.2,.8,.2,1) both}
-.winner-content{position:relative;z-index:2}.winner-kicker{display:block;color:#e4c987;font-size:9px;font-weight:800;letter-spacing:2.6px}.winner-content strong{display:block;margin:7px 0 3px;color:#fff4d8;font:600 clamp(26px,5vw,38px) "Playfair Display",serif}.winner-content p{margin:0;color:#c5d4c8;font-size:11px}.winner-replay{margin-top:13px;padding:10px 17px;border:1px solid #dfc88f;border-radius:6px;background:#d9bd7e;color:#203a31;font-size:10px;font-weight:800;letter-spacing:1px}.winner-replay span{margin-left:7px}.winner-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}.winner-confetti i{position:absolute;top:-12px;left:calc((var(--piece) * 5.7%) + 1%);width:6px;height:11px;border-radius:2px;background:hsl(calc(var(--piece) * 37),55%,72%);transform:rotate(calc(var(--piece) * 29deg));animation:confettiFall 2.2s ease-in calc(var(--piece) * 55ms) both}.winner-confetti i:nth-child(3n){width:8px;height:8px;border-radius:50%}.winner-confetti i:nth-child(4n){background:#e9d59d}
-@keyframes winnerEnter{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+.winner-celebration{position:relative;isolation:isolate;overflow:hidden;margin:0 0 16px;padding:27px 18px 25px;border:1px solid #e2c77f;border-radius:15px;background:radial-gradient(ellipse at 50% -12%,#66845a 0,#315b49 34%,#1c3935 70%,#172c2d 100%);box-shadow:0 14px 34px #0005,inset 0 1px 0 #fff5;text-align:center;animation:winnerEnter .58s cubic-bezier(.16,.82,.25,1) both}
+.winner-celebration:before{content:"";position:absolute;inset:5px;border:1px solid #e5ce9366;border-radius:11px;pointer-events:none;z-index:1}
+.winner-content{position:relative;z-index:3}.winner-kicker{display:block;color:#f1d58f;font-size:9px;font-weight:900;letter-spacing:3px;text-shadow:0 0 12px #f8d98a66}.winner-content strong{display:block;margin:8px 0 4px;color:#fff6df;font:600 clamp(28px,5.5vw,42px) "Playfair Display",serif;text-shadow:0 3px 18px #f3d28a55;animation:winnerNamePop .65s .12s cubic-bezier(.2,.8,.2,1) both}.winner-content p{margin:0;color:#d0ddcf;font-size:11px}.winner-replay{margin-top:15px;padding:11px 19px;border:1px solid #f0d99f;border-radius:7px;background:linear-gradient(135deg,#f1d99c,#cba85f);color:#203a31;font-size:10px;font-weight:900;letter-spacing:1px;box-shadow:0 4px 14px #090f0b55;transition:transform .18s ease,box-shadow .18s ease}.winner-replay:hover{transform:translateY(-2px);box-shadow:0 7px 18px #090f0b66}.winner-replay:disabled{opacity:.5;cursor:not-allowed;transform:none}.winner-replay span{margin-left:7px}.winner-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}.winner-confetti i{position:absolute;top:-14px;left:calc((var(--piece) * 4.1%) + 1%);width:6px;height:12px;border-radius:2px;background:hsl(calc(var(--piece) * 31),65%,76%);box-shadow:0 0 7px #ffe5a966;transform:rotate(calc(var(--piece) * 29deg));animation:confettiFall 2.5s cubic-bezier(.2,.65,.3,1) calc(var(--piece) * 42ms) both}.winner-confetti i:nth-child(3n){width:8px;height:8px;border-radius:50%}.winner-confetti i:nth-child(4n){background:#f2d99b}.winner-confetti i:nth-child(5n){width:4px;height:15px;background:#fff1bd}.winner-rays{position:absolute;z-index:1;left:50%;top:45%;width:190px;height:190px;transform:translate(-50%,-50%);border-radius:50%;background:repeating-conic-gradient(from 0deg,#f3d68b22 0deg 5deg,transparent 5deg 15deg);mask:radial-gradient(circle,transparent 0 18%,#000 48%,transparent 72%);animation:winnerRays 9s linear infinite;pointer-events:none}
+@keyframes winnerEnter{from{opacity:0;transform:translateY(13px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes winnerNamePop{0%{opacity:0;transform:scale(.82) translateY(5px)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+@keyframes winnerRays{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes confettiFall{0%{transform:translateY(-12px) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translateY(190px) rotate(540deg);opacity:0}}
-@media(prefers-reduced-motion:reduce){.winner-celebration,.winner-confetti i{animation:none}}
+@media(prefers-reduced-motion:reduce){.winner-celebration,.winner-confetti i,.winner-rays,.winner-content strong{animation:none}.winner-replay{transition:none}}
 
 
 .name-field-label{margin-top:22px}.name-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.name-field{display:grid;gap:6px}.name-field span{color:#718077;font-size:9px;font-weight:800;letter-spacing:1.2px}.name-field input{width:100%;min-width:0;border:1px solid #ded8ca;border-radius:7px;background:#fbf9f3;color:#253a32;padding:11px 12px;font:500 12px "DM Sans",system-ui,sans-serif;outline:none}.name-field input:focus{border-color:#a98a51;box-shadow:0 0 0 2px #c9b17f35}.name-field input:disabled{background:#eeece4;color:#8b9188;cursor:not-allowed}@media(max-width:430px){.name-fields{grid-template-columns:1fr}.name-field input{padding:10px 11px}}
@@ -208,3 +211,43 @@
  100%{transform:rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
 }
 @media(prefers-reduced-motion:reduce){.board-svg .home-dice.is-rolling .dice-cube{animation:none}}
+
+
+/* Polished dice roll: a quick lift, multi-axis tumble, and soft landing. */
+.board-svg .home-dice.is-rolling{
+ animation:diceRollLift .45s cubic-bezier(.2,.75,.25,1);
+}
+.board-svg .home-dice.is-rolling .dice-cube{
+ transform-box:fill-box;
+ transform-origin:center;
+ animation:diceRollTumble .45s cubic-bezier(.18,.72,.24,1);
+}
+@keyframes diceRollLift{
+ 0%,100%{filter:drop-shadow(4px 7px 3px #17251f55)}
+ 22%{filter:drop-shadow(8px 15px 6px #17251f77)}
+ 48%{filter:drop-shadow(-3px 10px 5px #17251f66)}
+ 78%{filter:drop-shadow(6px 11px 4px #17251f66)}
+}
+@keyframes diceRollTumble{
+ 0%{transform:translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.94)}
+ 18%{transform:translateY(-8px) rotateX(48deg) rotateY(62deg) rotateZ(105deg) scale(1.08)}
+ 42%{transform:translateY(-3px) rotateX(142deg) rotateY(168deg) rotateZ(225deg) scale(1.04)}
+ 68%{transform:translateY(-6px) rotateX(250deg) rotateY(278deg) rotateZ(305deg) scale(1.07)}
+ 86%{transform:translateY(1px) rotateX(330deg) rotateY(340deg) rotateZ(350deg) scale(.99)}
+ 100%{transform:translateY(0) rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+ .board-svg .home-dice.is-rolling,.board-svg .home-dice.is-rolling .dice-cube{animation:none}
+}
+
+
+/* Brief impact burst when a token is captured. */
+.capture-burst{transform-box:fill-box;transform-origin:center;animation:captureBurst .88s cubic-bezier(.16,.75,.25,1) both}
+.capture-ring{fill:none;stroke:#fff1b8;stroke-width:2.5;filter:drop-shadow(0 0 4px #f5bd55);animation:captureRing .78s ease-out both}
+.capture-rays{fill:none;stroke:#ffe4a0;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 3px #d99537);animation:captureRays .78s ease-out both}
+.capture-star{font-size:18px;font-weight:900;fill:#fff8d8;paint-order:stroke;stroke:#a86a25;stroke-width:1.5;filter:drop-shadow(0 1px 3px #6b421f);animation:captureStar .78s ease-out both}
+@keyframes captureBurst{0%{opacity:0;transform:scale(.2)}18%{opacity:1;transform:scale(1.15)}70%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes captureRing{0%{r:2;opacity:0}18%{opacity:1}100%{r:25;opacity:0}}
+@keyframes captureRays{0%{opacity:0;stroke-width:1;transform:scale(.35)}25%{opacity:1}100%{opacity:0;stroke-width:1;transform:scale(1.35)}}
+@keyframes captureStar{0%{opacity:0;transform:scale(.2) rotate(-35deg)}25%{opacity:1;transform:scale(1.2) rotate(12deg)}100%{opacity:0;transform:scale(.65) rotate(35deg)}}
+@media(prefers-reduced-motion:reduce){.capture-burst,.capture-ring,.capture-rays,.capture-star{animation:none;opacity:0}}
