@@ -230,10 +230,11 @@ export default function App(){
   const result=moveToken(players,turn,tokenIndex,rolled);
   if(result.players===players)return;
   const originalProgress=current.tokens[tokenIndex].progress;
+  const stepsToAnimate=originalProgress===-1?1:rolled;
   const animateStep=(step:number)=>{
    const progress=originalProgress===-1?0:originalProgress+step;
    setAnimatedToken({playerIndex:turn,tokenIndex,pos:tokenPosition(current.color,{progress},tokenIndex)});
-   if(step<rolled){
+   if(step<stepsToAnimate){
     tokenMoveTimer.current=window.setTimeout(()=>animateStep(step+1),175);
     return;
    }
