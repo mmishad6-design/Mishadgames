@@ -126,7 +126,7 @@ export default function ThreeBoard(props:Props){
   renderer.domElement.addEventListener("pointerdown",onPointer);
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
-  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*18;die.rotation.y+=delta*23;die.rotation.z+=delta*13;}}renderer.render(scene,camera);};render();
+  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*30;die.rotation.y+=delta*38;die.rotation.z+=delta*24;die.position.y=1.28+Math.sin(clock.elapsedTime*18)*.07;}}renderer.render(scene,camera);};render();
   return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
  },[]);
  useEffect(()=>{
@@ -156,7 +156,7 @@ export default function ThreeBoard(props:Props){
    cubeMesh.castShadow=true;cubeMesh.receiveShadow=true;cubeMesh.userData={kind:"dice"};cube.add(cubeMesh);
    const value=props.dice??props.lastDice??5,layout=faceLayout[value];
    makePips(cube,layout.top,"top");makePips(cube,layout.front,"front");makePips(cube,layout.side,"side");
-   cube.traverse(object=>{object.userData={kind:"dice"};});dice.add(cube);
+   cube.traverse(object=>{object.userData.kind="dice";});dice.add(cube);
   }
  },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken]);
  return <div className="board-3d-stage" ref={mountRef} role="group" aria-label="3D Ludo board">
