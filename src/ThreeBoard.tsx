@@ -185,7 +185,7 @@ export default function ThreeBoard(props:Props){
  useEffect(()=>{
   const tokenLayer=tokenLayerRef.current,ringLayer=ringLayerRef.current,dice=diceRef.current,progressLayer=progressLayerRef.current;if(!tokenLayer||!ringLayer||!dice||!progressLayer)return;
   ringLayer.clear();dice.clear();
-  progressLayer.traverse(object=>{const sprite=object as THREE.Sprite;if(sprite.material){const material=sprite.material as THREE.SpriteMaterial;material.map?.dispose();material.dispose();}if(sprite.geometry)sprite.geometry.dispose();});progressLayer.clear();
+  progressLayer.traverse(object=>{const sprite=object as THREE.Sprite;if((sprite as any).isSprite&&sprite.material){const material=sprite.material as THREE.SpriteMaterial;material.map?.dispose();material.dispose();}});progressLayer.clear();
   const activeColor=props.players[props.turn]?.color;
   if(activeColor){const base=BASES[activeColor],cx=base.x+2.5-7,cz=base.y+2.5-7;const ring=new THREE.Mesh(new THREE.RingGeometry(3.02,3.12,64),new THREE.MeshBasicMaterial({color:"#f4d28a",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(cx,.545,cz);ringLayer.add(ring);}
   const all=props.players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex?props.animatedToken.pos:tokenPosition(player.color,token,tokenIndex),moving:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex})));
@@ -202,7 +202,7 @@ export default function ThreeBoard(props:Props){
    if(!token){token=makeToken(tokenLayer,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex)) as THREE.Group;token.userData.target=target.clone();tokenMapRef.current.set(key,token);}
    else {token.userData.target=target;token.userData.onClick=()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex);token.traverse(object=>{if(object.userData.kind==="token")object.userData.onClick=token!.userData.onClick;});}
   }
-  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?` · ${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,`${percent}% COMPLETE${rank}`,cx,cz-1.9);}
+  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?` · ${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,`${percent}% COMPLETE${rank}`,cx,cz-1.65);}
   const color=props.players[props.turn]?.color;
   if(color){
    const base=BASES[color],px=base.x+(color==="red"||color==="blue"?5.25:.75)-7.5,pz=base.y+(color==="red"||color==="green"?5.25:.75)-7.5;
