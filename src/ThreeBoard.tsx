@@ -9,7 +9,7 @@ type Props={
 };
 const faceLayout:Record<number,{top:number;side:number;front:number}>={1:{top:1,side:3,front:1},2:{top:2,side:4,front:2},3:{top:3,side:5,front:3},4:{top:4,side:6,front:4},5:{top:5,side:1,front:5},6:{top:6,side:2,front:6}};
 const darken=(hex:string,factor:number)=>new THREE.Color(hex).multiplyScalar(factor);
-const mat=(color:string,roughness=.72)=>new THREE.MeshStandardMaterial({color,roughness,metalness:.02});
+const mat=(color:string,roughness=.72,metalness=.02)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
 function addBox(parent:THREE.Group,x:number,y:number,z:number,w:number,h:number,d:number,material:THREE.Material){
  const geometry=new THREE.BoxGeometry(w,h,d);
  const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
@@ -32,8 +32,23 @@ function addNameLabel(parent:THREE.Group,name:string,x:number,z:number){
 }
 function buildBoard(group:THREE.Group,players:Player[]){
  const wood=mat("#263a32"),edge=mat("#182c26"),white=mat("#fffdf7");
- addBox(group,0,-.18,0,15.45,.55,15.45,wood);
- addBox(group,0,-.48,0,15.7,.12,15.7,edge);
+ addBox(group,0,-.22,0,15.45,.62,15.45,wood);
+ addBox(group,0,-.53,0,15.78,.14,15.78,edge);
+ // Layered walnut-style rim with fine brass inlay makes the board read as a finished table.
+ const rim=mat("#765b36",.38,.48),brass=mat("#d2b16b",.3,.72);
+ addBox(group,0,.105,-7.48,15.12,.12,.16,rim);
+ addBox(group,0,.105,7.48,15.12,.12,.16,rim);
+ addBox(group,-7.48,.105,0,.16,.12,15.12,rim);
+ addBox(group,7.48,.105,0,.16,.12,15.12,rim);
+ addBox(group,0,.17,-7.48,14.82,.025,.035,brass);
+ addBox(group,0,.17,7.48,14.82,.025,.035,brass);
+ addBox(group,-7.48,.17,0,.035,.025,14.82,brass);
+ addBox(group,7.48,.17,0,.035,.025,14.82,brass);
+ // Small corner studs add a subtle handcrafted finish.
+ for(const x of [-7.18,7.18])for(const z of [-7.18,7.18]){
+  const stud=new THREE.Mesh(new THREE.SphereGeometry(.075,16,12),brass);
+  stud.position.set(x,.19,z);stud.castShadow=true;group.add(stud);
+ }
  // Four raised home platforms and their inset token bays.
  for(const color of COLORS){
   const base=BASES[color],cx=base.x+2.5-7,cz=base.y+2.5-7,shade=mat(darken(PALETTE[color],.68).getStyle());
@@ -71,12 +86,27 @@ function buildBoard(group:THREE.Group,players:Player[]){
 }
 function makeToken(parent:THREE.Group,color:string,index:number,x:number,z:number,selectable:boolean,onClick:()=>void){
  const token=new THREE.Group();token.position.set(x,.82,z);token.userData={kind:"token",index,onClick};
- const body=mat(color,.36);
- const base=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.16,28),mat(darken(color,.58).getStyle()));base.position.y=.02;base.castShadow=true;token.add(base);
- const stem=new THREE.Mesh(new THREE.ConeGeometry(.22,.48,28),body);stem.position.y=.31;stem.castShadow=true;token.add(stem);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.19,24,18),mat(color,.3));head.position.y=.59;head.castShadow=true;token.add(head);
- const glint=new THREE.Mesh(new THREE.SphereGeometry(.055,12,10),new THREE.MeshBasicMaterial({color:"#ffffff"}));glint.position.set(-.07,.68,-.11);token.add(glint);
- if(selectable){const ring=new THREE.Mesh(new THREE.RingGeometry(.31,.37,32),new THREE.MeshBasicMaterial({color:"#e5c47e",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=-.05;token.add(ring);}
+ const body=mat(color,.24,.16),dark=mat(darken(color,.52).getStyle(),.3,.28);
+ // One continuous lathed pawn silhouette: broad foot, tapered neck and rounded crown.
+ const profile=[
+  new THREE.Vector2(0,.08),new THREE.Vector2(.22,.08),new THREE.Vector2(.285,.12),
+  new THREE.Vector2(.30,.18),new THREE.Vector2(.27,.23),new THREE.Vector2(.18,.27),
+  new THREE.Vector2(.145,.34),new THREE.Vector2(.15,.45),new THREE.Vector2(.205,.54),
+  new THREE.Vector2(.235,.63),new THREE.Vector2(.22,.72),new THREE.Vector2(.17,.80),
+  new THREE.Vector2(.09,.85),new THREE.Vector2(0,.86)
+ ];
+ const pawn=new THREE.Mesh(new THREE.LatheGeometry(profile,40),body);
+ pawn.castShadow=true;pawn.receiveShadow=true;token.add(pawn);
+ const foot=new THREE.Mesh(new THREE.CylinderGeometry(.285,.30,.075,40),dark);
+ foot.position.y=.115;foot.castShadow=true;token.add(foot);
+ const collar=new THREE.Mesh(new THREE.TorusGeometry(.205,.025,10,40),mat("#e6c77f",.25,.72));
+ collar.rotation.x=Math.PI/2;collar.position.y=.265;token.add(collar);
+ const crown=new THREE.Mesh(new THREE.SphereGeometry(.055,16,12),new THREE.MeshStandardMaterial({color:"#fff7df",roughness:.16,metalness:.08}));
+ crown.position.set(-.075,.77,-.105);token.add(crown);
+ if(selectable){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.34,.41,48),new THREE.MeshBasicMaterial({color:"#f0cf82",side:THREE.DoubleSide,transparent:true,opacity:.95}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=-.045;ring.userData.isSelectionRing=true;token.add(ring);
+ }
  token.traverse(object=>{if((object as THREE.Mesh).isMesh)object.userData={kind:"token",index,onClick};});
  parent.add(token);return token;
 }
@@ -103,18 +133,22 @@ export default function ThreeBoard(props:Props){
   const mount=mountRef.current;if(!mount)return;
   let renderer:THREE.WebGLRenderer;
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"});}catch{return;}
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
   renderer.domElement.className="ludo-3d-canvas";renderer.domElement.setAttribute("aria-label","Interactive three dimensional Ludo board");
   mount.appendChild(renderer.domElement);
-  const scene=new THREE.Scene();scene.background=new THREE.Color("#d9c9a7");scene.fog=new THREE.Fog("#d9c9a7",28,55);
+  const scene=new THREE.Scene();scene.background=new THREE.Color("#d9c9a7");scene.fog=new THREE.Fog("#d9c9a7",32,62);
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(100,100),mat("#b7a27d",.92));
+  ground.rotation.x=-Math.PI/2;ground.position.y=-.62;ground.receiveShadow=true;scene.add(ground);
   const camera=new THREE.PerspectiveCamera(34,1,.1,100);camera.position.set(11.5,20,22);camera.lookAt(0,.1,0);
   const cameraTarget=new THREE.Vector3(0,.1,0);let radius=camera.position.distanceTo(cameraTarget),theta=Math.atan2(camera.position.x-cameraTarget.x,camera.position.z-cameraTarget.z),phi=Math.acos((camera.position.y-cameraTarget.y)/radius);
   const updateCamera=()=>{phi=THREE.MathUtils.clamp(phi,.28,Math.PI/2.05);radius=THREE.MathUtils.clamp(radius,15,42);camera.position.set(cameraTarget.x+radius*Math.sin(phi)*Math.sin(theta),cameraTarget.y+radius*Math.cos(phi),cameraTarget.z+radius*Math.sin(phi)*Math.cos(theta));camera.lookAt(cameraTarget);};
   const resetCamera=()=>{cameraTarget.set(0,.1,0);radius=30;theta=Math.atan2(11.5,22);phi=Math.acos(20/Math.sqrt(11.5*11.5+20*20+22*22));updateCamera();};resetViewRef.current=resetCamera;
-  scene.add(new THREE.HemisphereLight("#fff4dc","#42564a",2.1));
-  const key=new THREE.DirectionalLight("#fff0d2",3.2);key.position.set(-8,17,10);key.castShadow=true;key.shadow.mapSize.set(1536,1536);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
-  const fill=new THREE.DirectionalLight("#b7d4ff",.75);fill.position.set(10,9,-12);scene.add(fill);
+  scene.add(new THREE.HemisphereLight("#fff4dc","#42564a",1.75));
+  const ambient=new THREE.AmbientLight("#fff8e8",.38);scene.add(ambient);
+  const key=new THREE.DirectionalLight("#fff0d2",3.0);key.position.set(-8,18,10);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
+  const fill=new THREE.DirectionalLight("#c3d9ff",.9);fill.position.set(10,9,-12);scene.add(fill);
+  const rimLight=new THREE.DirectionalLight("#f4d49a",.65);rimLight.position.set(3,8,14);scene.add(rimLight);
   const board=new THREE.Group();scene.add(board);buildBoard(board,props.players);
   const pieces=new THREE.Group(),dice=new THREE.Group(),tokenLayer=new THREE.Group(),ringLayer=new THREE.Group();pieces.add(ringLayer,tokenLayer);scene.add(pieces,dice);
   piecesRef.current=pieces;diceRef.current=dice;tokenLayerRef.current=tokenLayer;ringLayerRef.current=ringLayer;tokenMapRef.current.clear();
@@ -129,7 +163,7 @@ export default function ThreeBoard(props:Props){
   renderer.domElement.addEventListener("pointerdown",onPointerDown);renderer.domElement.addEventListener("pointermove",onPointerMove);renderer.domElement.addEventListener("pointerup",onPointerUp);renderer.domElement.addEventListener("pointercancel",onPointerUp);renderer.domElement.addEventListener("wheel",onWheel,{passive:false});
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
-  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*30;die.rotation.y+=delta*38;die.rotation.z+=delta*24;die.position.y=1.28+Math.sin(clock.elapsedTime*18)*.07;}}renderer.render(scene,camera);};render();
+  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}token.children.forEach(child=>{if(child.userData.isSelectionRing){const pulse=1+Math.sin(clock.elapsedTime*5)*.055;child.scale.setScalar(pulse);}});}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*30;die.rotation.y+=delta*38;die.rotation.z+=delta*24;die.position.y=1.28+Math.sin(clock.elapsedTime*18)*.07;}}renderer.render(scene,camera);};render();
   return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointerDown);renderer.domElement.removeEventListener("pointermove",onPointerMove);renderer.domElement.removeEventListener("pointerup",onPointerUp);renderer.domElement.removeEventListener("pointercancel",onPointerUp);renderer.domElement.removeEventListener("wheel",onWheel);resetViewRef.current=()=>{};renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
  },[]);
  useEffect(()=>{
@@ -155,8 +189,13 @@ export default function ThreeBoard(props:Props){
   if(color){
    const base=BASES[color],px=base.x+(color==="red"||color==="blue"?5.25:.75)-7.5,pz=base.y+(color==="red"||color==="green"?5.25:.75)-7.5;
    const cube=new THREE.Group();cube.position.set(px,1.28,pz);cube.rotation.set(-.12,.25,.08);cube.userData={kind:"dice",isRolling:props.rolling};
-   const cubeMesh=new THREE.Mesh(new THREE.BoxGeometry(.92,.92,.92),[mat("#fffdf5"),mat("#e9e3d6"),mat("#fffdf5"),mat("#ddd5c5"),mat("#fffdf5"),mat("#77796f")]);
+   const cubeMesh=new THREE.Mesh(new THREE.BoxGeometry(.92,.92,.92),[
+    mat("#fffdf5",.22,.06),mat("#e9e3d6",.3,.04),mat("#fffdf5",.22,.06),
+    mat("#ddd5c5",.34,.03),mat("#fffdf5",.22,.06),mat("#77796f",.5,.02)
+   ]);
    cubeMesh.castShadow=true;cubeMesh.receiveShadow=true;cubeMesh.userData={kind:"dice"};cube.add(cubeMesh);
+   const bevelLines=new THREE.LineSegments(new THREE.EdgesGeometry(cubeMesh.geometry,18),new THREE.LineBasicMaterial({color:"#b9ad98",transparent:true,opacity:.72}));
+   bevelLines.userData={kind:"dice"};cube.add(bevelLines);
    const value=props.dice??props.lastDice??5,layout=faceLayout[value];
    makePips(cube,layout.top,"top");makePips(cube,layout.front,"front");makePips(cube,layout.side,"side");
    cube.traverse(object=>{object.userData.kind="dice";});dice.add(cube);
