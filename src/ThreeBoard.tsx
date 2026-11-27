@@ -78,7 +78,7 @@ function makeToken(parent:THREE.Group,color:string,index:number,x:number,z:numbe
  const glint=new THREE.Mesh(new THREE.SphereGeometry(.055,12,10),new THREE.MeshBasicMaterial({color:"#ffffff"}));glint.position.set(-.07,.68,-.11);token.add(glint);
  if(selectable){const ring=new THREE.Mesh(new THREE.RingGeometry(.31,.37,32),new THREE.MeshBasicMaterial({color:"#e5c47e",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=-.05;token.add(ring);}
  token.traverse(object=>{if((object as THREE.Mesh).isMesh)object.userData={kind:"token",index,onClick};});
- parent.add(token);
+ parent.add(token);return token;
 }
 function makePips(parent:THREE.Group,face:number,axis:"top"|"front"|"side"){
  const spots:Record<number,[number,number][]>={
@@ -97,7 +97,7 @@ function makePips(parent:THREE.Group,face:number,axis:"top"|"front"|"side"){
 }
 export default function ThreeBoard(props:Props){
  const mountRef=useRef<HTMLDivElement|null>(null);
- const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
+ const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),tokenLayerRef=useRef<THREE.Group|null>(null),ringLayerRef=useRef<THREE.Group|null>(null),tokenMapRef=useRef<Map<string,THREE.Group>>(new Map()),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
  callbacksRef.current={onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll};
  useEffect(()=>{
   const mount=mountRef.current;if(!mount)return;
@@ -113,12 +113,12 @@ export default function ThreeBoard(props:Props){
   const key=new THREE.DirectionalLight("#fff0d2",3.2);key.position.set(-8,17,10);key.castShadow=true;key.shadow.mapSize.set(1536,1536);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
   const fill=new THREE.DirectionalLight("#b7d4ff",.75);fill.position.set(10,9,-12);scene.add(fill);
   const board=new THREE.Group();scene.add(board);buildBoard(board,props.players);
-  const pieces=new THREE.Group(),dice=new THREE.Group();scene.add(pieces,dice);
-  piecesRef.current=pieces;diceRef.current=dice;
+  const pieces=new THREE.Group(),dice=new THREE.Group(),tokenLayer=new THREE.Group(),ringLayer=new THREE.Group();pieces.add(ringLayer,tokenLayer);scene.add(pieces,dice);
+  piecesRef.current=pieces;diceRef.current=dice;tokenLayerRef.current=tokenLayer;ringLayerRef.current=ringLayer;tokenMapRef.current.clear();
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const onPointer=(event:PointerEvent)=>{
    const rect=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
-   raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects([pieces,dice],true).find(item=>item.object.userData.kind);
+   raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects([tokenLayer,dice],true).find(item=>item.object.userData.kind);
    if(!hit)return;const data=hit.object.userData;
    if(data.kind==="dice"&&callbacksRef.current.canRoll)callbacksRef.current.onRoll();
    if(data.kind==="token"&&typeof data.index==="number"&&typeof data.onClick==="function")data.onClick();
@@ -126,14 +126,14 @@ export default function ThreeBoard(props:Props){
   renderer.domElement.addEventListener("pointerdown",onPointer);
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
-  let frame=0;const render=()=>{frame=requestAnimationFrame(render);renderer.render(scene,camera);};render();
-  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;};
+  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}renderer.render(scene,camera);};render();
+  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
  },[]);
  useEffect(()=>{
-  const pieces=piecesRef.current,dice=diceRef.current;if(!pieces||!dice)return;
-  pieces.clear();dice.clear();
+  const tokenLayer=tokenLayerRef.current,ringLayer=ringLayerRef.current,dice=diceRef.current;if(!tokenLayer||!ringLayer||!dice)return;
+  ringLayer.clear();dice.clear();
   const activeColor=props.players[props.turn]?.color;
-  if(activeColor){const base=BASES[activeColor],cx=base.x+2.5-7,cz=base.y+2.5-7;const ring=new THREE.Mesh(new THREE.RingGeometry(3.02,3.12,64),new THREE.MeshBasicMaterial({color:"#f4d28a",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(cx,.545,cz);pieces.add(ring);}
+  if(activeColor){const base=BASES[activeColor],cx=base.x+2.5-7,cz=base.y+2.5-7;const ring=new THREE.Mesh(new THREE.RingGeometry(3.02,3.12,64),new THREE.MeshBasicMaterial({color:"#f4d28a",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(cx,.545,cz);ringLayer.add(ring);}
   const all=props.players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex?props.animatedToken.pos:tokenPosition(player.color,token,tokenIndex),moving:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex})));
   for(const piece of all){
    const [gx,gy]=piece.pos;const home=piece.player.tokens[piece.tokenIndex].progress===-1&&!piece.moving;
@@ -142,7 +142,11 @@ export default function ThreeBoard(props:Props){
    const stackIndex=stacked.findIndex(other=>other.playerIndex===piece.playerIndex&&other.tokenIndex===piece.tokenIndex);
    const dx=stacked.length>1?(stackIndex%2)*.27-.135:0,dz=stacked.length>1?Math.floor(stackIndex/2)*.27-.135:0;
    const selectable=piece.playerIndex===props.turn&&props.choices.includes(piece.tokenIndex);
-   makeToken(pieces,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex));
+   const key=piece.playerIndex+"-"+piece.tokenIndex;
+   const target=new THREE.Vector3(x+dx,.82,z+dz);
+   let token=tokenMapRef.current.get(key);
+   if(!token){token=makeToken(tokenLayer,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex)) as THREE.Group;token.userData.target=target.clone();tokenMapRef.current.set(key,token);}
+   else {token.userData.target=target;token.userData.onClick=()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex);token.traverse(object=>{if(object.userData.kind==="token")object.userData.onClick=token!.userData.onClick;});}
   }
   const color=props.players[props.turn]?.color;
   if(color){
