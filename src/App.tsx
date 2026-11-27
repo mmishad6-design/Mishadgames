@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState} from "react";
 import {COLORS,PALETTE,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
 import {supabase} from "./supabase";
-import ThreeBoard from "./ThreeBoard";\nimport TwoDBoard from "./TwoDBoard";
+import ThreeBoard from "./ThreeBoard";
+import TwoDBoard from "./TwoDBoard";
 type Mode="local"|"ai"|"online";
 type MatchRecord={id:number;date:string;mode:Mode;players:string[];winner:string};
 function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
@@ -64,7 +65,8 @@ function getSavedOnlineSession():{roomCode:string;playerIndex:number;playerIndic
 export default function App(){
  const [mode,setMode]=useState<Mode>(()=>getSavedOnlineSession()?"online":"local"),[count,setCount]=useState(2),[players,setPlayers]=useState<Player[]>([]),[turn,setTurn]=useState(0);
  const [onlineName,setOnlineName]=useState(()=>getSavedOnlineSession()?.name||""),[onlinePlayerNames,setOnlinePlayerNames]=useState<string[]>(()=>[getSavedOnlineSession()?.name||"","Player 2","Player 3","Player 4"]),[joinCode,setJoinCode]=useState(""),[activeRoomCode,setActiveRoomCode]=useState<string|null>(()=>getSavedOnlineSession()?.roomCode||null),[onlineIndex,setOnlineIndex]=useState(()=>getSavedOnlineSession()?.playerIndex||0),[onlineSeatIndices,setOnlineSeatIndices]=useState<number[]>(()=>getSavedOnlineSession()?.playerIndices||[getSavedOnlineSession()?.playerIndex??0]),[onlinePlayerCount,setOnlinePlayerCount]=useState(1),[onlineError,setOnlineError]=useState(""),[onlineBusy,setOnlineBusy]=useState(false),[reconnectKey,setReconnectKey]=useState(0);const [onlinePlayers,setOnlinePlayers]=useState<number[]>([]),[presenceReady,setPresenceReady]=useState(false),[resetRequest,setResetRequest]=useState<any>(null);const roomChannelRef=useRef<any>(null);
- const [theme,setTheme]=useState<"light"|"dark">(()=>{try{return localStorage.getItem("mishads-ludo-theme")==="dark"?"dark":"light";}catch{return "light";}});\n const [boardView,setBoardView]=useState<"2d"|"3d">(()=>{try{return localStorage.getItem("mishads-ludo-board-view")==="2d"?"2d":"3d";}catch{return "3d";}});
+ const [theme,setTheme]=useState<"light"|"dark">(()=>{try{return localStorage.getItem("mishads-ludo-theme")==="dark"?"dark":"light";}catch{return "light";}});
+ const [boardView,setBoardView]=useState<"2d"|"3d">(()=>{try{return localStorage.getItem("mishads-ludo-board-view")==="2d"?"2d":"3d";}catch{return "3d";}});
  const [playerNames,setPlayerNames]=useState(["Player 1","Player 2","Player 3","Player 4"]);
  const [matchHistory,setMatchHistory]=useState<MatchRecord[]>(()=>{
   try{return JSON.parse(localStorage.getItem("mishads-ludo-history")||"[]") as MatchRecord[];}catch{return [];}
@@ -258,7 +260,8 @@ export default function App(){
   return()=>{window.removeEventListener("online",reconnect);window.removeEventListener("pageshow",reconnect);document.removeEventListener("visibilitychange",reconnect);};
  },[activeRoomCode,mode]);
  useEffect(()=>{try{localStorage.setItem("mishads-ludo-history",JSON.stringify(matchHistory));}catch{/* History remains available for this session if storage is unavailable. */}},[matchHistory]);
- useEffect(()=>{try{localStorage.setItem("mishads-ludo-theme",theme);}catch{/* Theme remains available for this session if storage is unavailable. */}},[theme]);\n useEffect(()=>{try{localStorage.setItem("mishads-ludo-board-view",boardView);}catch{/* Board view remains available for this session if storage is unavailable. */}},[boardView]);
+ useEffect(()=>{try{localStorage.setItem("mishads-ludo-theme",theme);}catch{/* Theme remains available for this session if storage is unavailable. */}},[theme]);
+ useEffect(()=>{try{localStorage.setItem("mishads-ludo-board-view",boardView);}catch{/* Board view remains available for this session if storage is unavailable. */}},[boardView]);
  const playerStats=matchHistory.reduce<Record<string,{played:number;won:number}>>((stats,match)=>{
   for(const name of match.players){stats[name]??={played:0,won:0};stats[name].played+=1;if(name===match.winner)stats[name].won+=1;}
   return stats;
