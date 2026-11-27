@@ -1,4 +1,4 @@
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {COLORS,PALETTE,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
 import {supabase} from "./supabase";
 import ThreeBoard from "./ThreeBoard";
