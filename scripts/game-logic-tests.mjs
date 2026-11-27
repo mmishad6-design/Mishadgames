@@ -88,4 +88,36 @@ test("winner is declared only after all four tokens finish", () => {
   assert.equal(winner(player("red", [56, 56, 56, 55])), false);
 });
 
+
+test("progress percentage averages all four tokens across their complete routes", () => {
+  assert.equal(progressPercent(player("red", [-1, -1, -1, -1])), 0);
+  assert.equal(progressPercent(player("red", [56, 56, 56, 56])), 100);
+  assert.equal(progressPercent(player("red", [28, 28, -1, -1])), 25);
+});
+
+test("the first finisher is ranked first while remaining players continue", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green"), player("yellow")];
+  const result = assignPlacement(players, 0);
+  assert.equal(result.completed, false);
+  assert.equal(result.players[0].rank, 1);
+  assert.equal(result.players[1].rank, undefined);
+  assert.equal(result.nextTurn, 1);
+});
+
+test("the final remaining player is assigned the last place and ends the match", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green", [56, 56, 56, 56]), player("yellow")];
+  const result = assignPlacement(players, 1);
+  assert.equal(result.completed, true);
+  assert.deepEqual(result.players.map(item => item.rank), [1, 2, 3]);
+  assert.equal(result.nextTurn, -1);
+  assert.equal(result.winner, "red");
+});
+
+test("placement selection skips players who have already finished", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green"), player("yellow", [56, 56, 56, 56])];
+  const result = assignPlacement(players, 2);
+  assert.equal(result.players[2].rank, 2);
+  assert.equal(result.nextTurn, 1);
+});
+
 process.stdout.write(`\n${passed} game logic checks passed.\n`);
