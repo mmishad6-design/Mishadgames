@@ -114,10 +114,11 @@ test("the final remaining player is assigned the last place and ends the match",
 });
 
 test("placement selection skips players who have already finished", () => {
-  const players = [player("red", [56, 56, 56, 56]), player("green"), player("yellow", [56, 56, 56, 56])];
+  const players = [player("red", [56, 56, 56, 56]), player("green"), player("yellow", [56, 56, 56, 56]), player("blue")];
   const result = assignPlacement(players, 2);
   assert.equal(result.players[2].rank, 2);
-  assert.equal(result.nextTurn, 1);
+  assert.equal(result.completed, false);
+  assert.equal(result.nextTurn, 3);
 });
 
 process.stdout.write(`\n${passed} game logic checks passed.\n`);
