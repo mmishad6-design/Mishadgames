@@ -4,7 +4,7 @@ const DICE_DOTS:Record<number,[number,number][]> = {
   4:[[-14,-14],[14,-14],[-14,14],[14,14]],5:[[-14,-14],[14,-14],[0,0],[-14,14],[14,14]],
   6:[[-14,-14],[14,-14],[-14,0],[14,0],[-14,14],[14,14]]
 };
-export default function TwoDBoard({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null;turnSeconds:number;timerActive:boolean}){
+export default function TwoDBoard({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken,turnSeconds,timerActive}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null;turnSeconds:number;timerActive:boolean}){
  const displayValue=dice??lastDice??5;
  const faceLayout:Record<number,{top:number;side:number}>={1:{top:2,side:3},2:{top:1,side:4},3:{top:1,side:5},4:{top:2,side:6},5:{top:3,side:1},6:{top:4,side:2}};
  const faceDots=(value:number)=>DICE_DOTS[value].map(([x,y])=>[x/14,y/14] as [number,number]);
