@@ -1,6 +1,6 @@
 export type Color = "red" | "green" | "yellow" | "blue";
 export type Token = { progress: number };
-export type Player = { color: Color; name: string; ai: boolean; tokens: Token[] };
+export type Player = { color: Color; name: string; ai: boolean; tokens: Token[]; rank?: number };
 
 export const COLORS: Color[] = ["red", "green", "yellow", "blue"];
 export const COLOR_NAMES: Record<Color, string> = { red: "Red", green: "Green", yellow: "Yellow", blue: "Blue" };
@@ -139,7 +139,7 @@ export function moveToken(
   return { players: next, captured, finished: token.progress === 56 };
 }
 
-export function winner(player: Player): boolean {
+export function progressPercent(player: Player): number {\n  if (!player.tokens.length) return 0;\n  const total = player.tokens.reduce((sum, token) => sum + Math.max(0, Math.min(56, token.progress)), 0);\n  return Math.round((total / (player.tokens.length * 56)) * 100);\n}\n\nexport function winner(player: Player): boolean {
   return player.tokens.length === 4 && player.tokens.every(token => token.progress === 56);
 }
 
