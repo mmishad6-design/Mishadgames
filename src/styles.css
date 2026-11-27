@@ -328,3 +328,16 @@
 .final-rankings span{color:#e4c987;font-weight:900;font-variant-numeric:tabular-nums}
 .app-shell[data-theme="dark"] .turn-countdown{background:#34463e;color:#f3dfb3;border-color:#c4a66b}
 @media(max-width:600px){.game-heading-actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}.turn-countdown{font-size:8px;padding:7px 8px}}
+
+
+/* Clear turn countdown panel placed directly above the board. */
+.turn-timer-panel{width:100%;margin:0 0 13px;padding:12px 15px;border:1px solid #b99a60;border-radius:12px;background:linear-gradient(120deg,#203f35,#31584a);color:#fff8e8;box-shadow:0 5px 14px #17251f24}
+.turn-timer-copy{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.turn-timer-copy>span{font-size:11px;font-weight:900;letter-spacing:1.15px;color:#f1d79f}
+.turn-timer-copy>strong{font-size:25px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums;color:#fff8e8}
+.turn-timer-copy>strong small{font-size:10px;letter-spacing:.8px;color:#f1d79f}
+.turn-timer-track{height:8px;margin-top:10px;overflow:hidden;border-radius:99px;background:#ffffff35}
+.turn-timer-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#e4c77e,#fff0bd);transition:width .22s linear}
+.turn-timer-panel p{margin:7px 0 0;font-size:10px;line-height:1.4;color:#e6e7d9}
+.app-shell[data-theme="dark"] .turn-timer-panel{background:linear-gradient(120deg,#172b28,#263f35);border-color:#d0b273}
+@media(max-width:560px){.turn-timer-panel{padding:10px 12px;margin-bottom:10px}.turn-timer-copy>span{font-size:9px;letter-spacing:.8px}.turn-timer-copy>strong{font-size:23px}.turn-timer-panel p{font-size:9px}}
