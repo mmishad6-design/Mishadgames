@@ -126,7 +126,7 @@ export default function ThreeBoard(props:Props){
   renderer.domElement.addEventListener("pointerdown",onPointer);
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
-  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}renderer.render(scene,camera);};render();
+  let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*18;die.rotation.y+=delta*23;die.rotation.z+=delta*13;}}renderer.render(scene,camera);};render();
   return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
  },[]);
  useEffect(()=>{
@@ -151,12 +151,11 @@ export default function ThreeBoard(props:Props){
   const color=props.players[props.turn]?.color;
   if(color){
    const base=BASES[color],px=base.x+(color==="red"||color==="blue"?5.25:.75)-7.5,pz=base.y+(color==="red"||color==="green"?5.25:.75)-7.5;
-   const cube=new THREE.Group();cube.position.set(px,1.28,pz);cube.rotation.set(-.12,.25,.08);cube.userData={kind:"dice"};
+   const cube=new THREE.Group();cube.position.set(px,1.28,pz);cube.rotation.set(-.12,.25,.08);cube.userData={kind:"dice",isRolling:props.rolling};
    const cubeMesh=new THREE.Mesh(new THREE.BoxGeometry(.92,.92,.92),[mat("#fffdf5"),mat("#e9e3d6"),mat("#fffdf5"),mat("#ddd5c5"),mat("#fffdf5"),mat("#77796f")]);
    cubeMesh.castShadow=true;cubeMesh.receiveShadow=true;cubeMesh.userData={kind:"dice"};cube.add(cubeMesh);
    const value=props.dice??props.lastDice??5,layout=faceLayout[value];
    makePips(cube,layout.top,"top");makePips(cube,layout.front,"front");makePips(cube,layout.side,"side");
-   if(props.rolling){cube.rotation.x+=.5;cube.rotation.y+=.8;}
    cube.traverse(object=>{object.userData={kind:"dice"};});dice.add(cube);
   }
  },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken]);
