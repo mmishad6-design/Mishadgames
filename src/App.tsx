@@ -206,7 +206,7 @@ export default function App(){
  moveSelectedRef.current=moveSelected;
  useEffect(()=>{if(autoMoveIndex===null||dice===null||!choices.includes(autoMoveIndex)||!started||champion||busy||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;const timer=window.setTimeout(()=>{moveSelected(autoMoveIndex);setAutoMoveIndex(null);},700);return()=>window.clearTimeout(timer);},[autoMoveIndex,dice,choices,started,champion,busy,resetRequest?.status,mode,onlineSeatIndices,turn,players]);
  useEffect(()=>{
-  if(!started||mode==="online"||!current?.ai||champion||busy||passPending)return;
+  if(!started||mode==="online"||!current?.ai||current.rank||champion||busy||passPending)return;
   aiTimer.current=window.setTimeout(()=>{
    if(dice===null)rollDice();
    else if(choices.length)moveSelected(chooseAiToken(players,turn,dice,choices));
