@@ -320,3 +320,11 @@
  .board-3d-tools button{transition:none}
  .board-3d-tools button:hover{transform:none}
 }
+
+/* Turn countdown, per-player route progress and final standings. */
+.turn-countdown{align-self:center;padding:8px 10px;border:1px solid #c9ad73;border-radius:18px;background:#f4eddd;color:#735a31;font-size:9px;font-weight:900;letter-spacing:.6px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.final-rankings{display:grid;gap:6px;max-width:360px;margin:13px auto}
+.final-rankings>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;border:1px solid #ffffff26;border-radius:7px;background:#ffffff10;color:#fff4d8;font-size:12px}
+.final-rankings span{color:#e4c987;font-weight:900;font-variant-numeric:tabular-nums}
+.app-shell[data-theme="dark"] .turn-countdown{background:#34463e;color:#f3dfb3;border-color:#c4a66b}
+@media(max-width:600px){.game-heading-actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}.turn-countdown{font-size:8px;padding:7px 8px}}
