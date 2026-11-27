@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from "react";
-import {COLORS,PALETTE,chooseAiToken,legalTokens,moveToken,progressPercent,tokenPosition,winner,type Color,type Player} from "./game";
+import {COLORS,PALETTE,assignPlacement,chooseAiToken,legalTokens,moveToken,progressPercent,tokenPosition,winner,type Color,type Player} from "./game";
 import {supabase} from "./supabase";
 import ThreeBoard from "./ThreeBoard";
 import TwoDBoard from "./TwoDBoard";
@@ -183,15 +183,11 @@ export default function App(){
     playSound(result.captured>0?"capture":"move");
     if(winner(result.players[turn])){
      playSound("win");
-     const place=result.players.filter(player=>player.rank).length+1;
-     let rankedPlayers=result.players.map((player,index)=>index===turn?{...player,rank:place}:player);
-     const unfinished=rankedPlayers.filter(player=>!player.rank);
-     const completed=unfinished.length<=1;
-     if(completed&&unfinished.length===1)rankedPlayers=rankedPlayers.map(player=>player.rank?player:{...player,rank:place+1});
-     const first=rankedPlayers.find(player=>player.rank===1)?.name||current.name;
+     const placement=assignPlacement(result.players,turn);
+     const rankedPlayers=placement.players,place=rankedPlayers[turn].rank||1,completed=placement.completed,next=placement.nextTurn<0?turn:placement.nextTurn;
+     const first=placement.winner||current.name;
      const message=completed?"Match complete. All player positions are decided.":current.name+" finished in "+(place===1?"1st":place===2?"2nd":place===3?"3rd":place+"th")+" place. The remaining players continue.";
      setPlayers(rankedPlayers);setDice(null);setChoices([]);setMessage(message);setTurnSeconds(45);
-     const next=completed?turn:Array.from({length:rankedPlayers.length},(_,offset)=>(turn+offset+1)%rankedPlayers.length).find(index=>!rankedPlayers[index].rank)??turn;
      if(completed)setChampion("Match complete");else setTurn(next);
      if(mode==="online")void syncOnlineState({players:rankedPlayers,turn:next,dice:null,lastDice,choices:[],message,champion:completed?"Match complete":null,started:true});
      if(completed)setMatchHistory(history=>[{id:Date.now(),date:new Date().toISOString(),mode,players:rankedPlayers.map(player=>player.name),winner:first},...history].slice(0,50));
