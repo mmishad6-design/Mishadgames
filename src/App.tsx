@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from "react";
-import {BASES,BASE_SPOTS,COLORS,COLOR_NAMES,HOME_LANES,PALETTE,SAFE,START,TRACK,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
+import {COLORS,PALETTE,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
 import {supabase} from "./supabase";
 import ThreeBoard from "./ThreeBoard";
 type Mode="local"|"ai"|"online";
@@ -8,11 +8,6 @@ function createPlayers(count:number,mode:Mode,names:string[]):Player[]{
  const colors:Color[]=count===2?["red","yellow"]:count===3?["red","green","yellow"]:COLORS;
  return colors.map((color,index)=>({color,name:mode==="ai"&&index>0?"Computer":(names[index]?.trim()||"Player "+(index+1)),ai:mode==="ai"&&index>0,tokens:Array.from({length:4},()=>({progress:-1}))}));
 }
-const DICE_DOTS:Record<number,[number,number][]> = {
-  1:[[0,0]],2:[[-14,-14],[14,14]],3:[[-14,-14],[0,0],[14,14]],
-  4:[[-14,-14],[14,-14],[-14,14],[14,14]],5:[[-14,-14],[14,-14],[0,0],[-14,14],[14,14]],
-  6:[[-14,-14],[14,-14],[-14,0],[14,0],[-14,14],[14,14]]
-};
 function Board(props:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null}){return <ThreeBoard {...props}/>;}
 function OnlinePanel({names,setNames,code,setCode,playerCount,setPlayerCount,activeCode,players,onlineIndex,onlineSeatIndices,onlinePlayers,presenceReady,error,busy,onCreate,onJoin,onStart,onBack}:{names:string[];setNames:(v:string[])=>void;code:string;setCode:(v:string)=>void;playerCount:number;setPlayerCount:(v:number)=>void;activeCode:string|null;players:Player[];onlineIndex:number;onlineSeatIndices:number[];onlinePlayers:number[];presenceReady:boolean;error:string;busy:boolean;onCreate:()=>void;onJoin:()=>void;onStart:()=>void;onBack:()=>void}){
  return <div className="online-card"><button className="back-btn online-back" onClick={onBack}>← Game modes</button><span className="step">ONLINE MULTIPLAYER</span><h2>{activeCode?"Your room is ready":"Play with friends online"}</h2>
