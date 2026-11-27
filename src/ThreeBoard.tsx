@@ -6,7 +6,7 @@ type Props={
  players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;
  rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(index:number)=>void;
  animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null;
- timerSeconds:number;timerActive:boolean;
+ turnSeconds:number;timerActive:boolean;
 };
 const faceLayout:Record<number,{top:number;side:number;front:number}>={1:{top:1,side:3,front:1},2:{top:2,side:4,front:2},3:{top:3,side:5,front:3},4:{top:4,side:6,front:4},5:{top:5,side:1,front:5},6:{top:6,side:2,front:6}};
 const darken=(hex:string,factor:number)=>new THREE.Color(hex).multiplyScalar(factor);
@@ -213,7 +213,7 @@ export default function ThreeBoard(props:Props){
    if(!token){token=makeToken(tokenLayer,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex)) as THREE.Group;token.userData.target=target.clone();tokenMapRef.current.set(key,token);}
    else {token.userData.target=target;token.userData.onClick=()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex);token.traverse(object=>{if(object.userData.kind==="token")object.userData.onClick=token!.userData.onClick;});}
   }
-  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?`${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,percent,rank,cx,cz-1.65);if(props.timerActive&&props.players[props.turn]?.color===player.color)addTimerLabel(progressLayer,props.timerSeconds,cx,cz-0.78);}
+  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?`${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,percent,rank,cx,cz-1.65);if(props.timerActive&&props.players[props.turn]?.color===player.color)addTimerLabel(progressLayer,props.turnSeconds,cx,cz-0.78);}
   const color=props.players[props.turn]?.color;
   if(color){
    const base=BASES[color],px=base.x+(color==="red"||color==="blue"?5.25:.75)-7.5,pz=base.y+(color==="red"||color==="green"?5.25:.75)-7.5;
@@ -229,7 +229,7 @@ export default function ThreeBoard(props:Props){
    makePips(cube,layout.top,"top");makePips(cube,layout.front,"front");makePips(cube,layout.side,"side");
    cube.traverse(object=>{object.userData.kind="dice";});dice.add(cube);
   }
- },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken,props.timerSeconds,props.timerActive]);
+ },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken,props.turnSeconds,props.timerActive]);
  return <div className="board-3d-wrap">
   <div className="board-3d-stage" ref={mountRef} role="group" aria-label="3D Ludo board">
    <span className="board-3d-caption">3D BOARD · INTERACTIVE</span>
