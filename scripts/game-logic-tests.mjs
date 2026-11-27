@@ -104,14 +104,18 @@ test("the first finisher is ranked first while remaining players continue", () =
   assert.equal(result.nextTurn, 1);
 });
 
-test("the final remaining player is assigned the last place and ends the match", () => {
-  const players = [player("red", [56, 56, 56, 56]), player("green", [56, 56, 56, 56]), player("yellow")];
+test("the final remaining player keeps playing and earns the last place by finishing", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green", [56, 56, 56, 56]), player("yellow", [56, 56, 56, 56])];
   const first = assignPlacement(players, 0);
-  const result = assignPlacement(first.players, 1);
-  assert.equal(result.completed, true);
-  assert.deepEqual(result.players.map(item => item.rank), [1, 2, 3]);
-  assert.equal(result.nextTurn, -1);
-  assert.equal(result.winner, "red");
+  const second = assignPlacement(first.players, 1);
+  assert.equal(second.completed, false);
+  assert.deepEqual(second.players.map(item => item.rank), [1, 2, undefined]);
+  assert.equal(second.nextTurn, 2);
+  const final = assignPlacement(second.players, 2);
+  assert.equal(final.completed, true);
+  assert.deepEqual(final.players.map(item => item.rank), [1, 2, 3]);
+  assert.equal(final.nextTurn, -1);
+  assert.equal(final.winner, "red");
 });
 
 test("placement selection skips players who have already finished", () => {
