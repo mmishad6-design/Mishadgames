@@ -38,8 +38,8 @@ export default function TwoDBoard({players,turn,choices,dice,lastDice,rolling,ca
    <text x={base.x*40+120} y={base.y*40+36} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="10" fontWeight="800" letterSpacing=".5" fill="#fff4d8">{player?`PROGRESS ${progress}%`:""}</text>
    {players[turn]?.color===color&&<g pointerEvents="none">
     <rect x={base.x*40+7} y={base.y*40+7} width="226" height="226" rx="12" fill="none" stroke="#f4d28a" strokeWidth="5"/>
-    <rect x={base.x*40+82} y={base.y*40+31} width="76" height="19" rx="9.5" fill="#f4d28a"/>
-    <text x={base.x*40+120} y={base.y*40+44.5} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="9" fontWeight="800" letterSpacing=".8" fill="#26372f">CURRENT TURN</text>
+    <rect x={base.x*40+82} y={base.y*40+210} width="76" height="19" rx="9.5" fill="#f4d28a"/>
+    <text x={base.x*40+120} y={base.y*40+223.5} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="9" fontWeight="800" letterSpacing=".8" fill="#26372f">CURRENT TURN</text>
    </g>}
   </g>})}
   {pieces.map(piece=>{
