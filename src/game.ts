@@ -139,7 +139,13 @@ export function moveToken(
   return { players: next, captured, finished: token.progress === 56 };
 }
 
-export function progressPercent(player: Player): number {\n  if (!player.tokens.length) return 0;\n  const total = player.tokens.reduce((sum, token) => sum + Math.max(0, Math.min(56, token.progress)), 0);\n  return Math.round((total / (player.tokens.length * 56)) * 100);\n}\n\nexport function assignPlacement(players: Player[], playerIndex: number): { players: Player[]; completed: boolean; nextTurn: number; winner: string | null } {
+export function progressPercent(player: Player): number {
+  if (!player.tokens.length) return 0;
+  const total = player.tokens.reduce((sum, token) => sum + Math.max(0, Math.min(56, token.progress)), 0);
+  return Math.round((total / (player.tokens.length * 56)) * 100);
+}
+
+export function assignPlacement(players: Player[], playerIndex: number): { players: Player[]; completed: boolean; nextTurn: number; winner: string | null } {
   if (!players[playerIndex] || players[playerIndex].rank) {
     return { players, completed: players.every(player => !!player.rank), nextTurn: -1, winner: players.find(player => player.rank === 1)?.name ?? null };
   }
