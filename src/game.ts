@@ -139,7 +139,20 @@ export function moveToken(
   return { players: next, captured, finished: token.progress === 56 };
 }
 
-export function progressPercent(player: Player): number {\n  if (!player.tokens.length) return 0;\n  const total = player.tokens.reduce((sum, token) => sum + Math.max(0, Math.min(56, token.progress)), 0);\n  return Math.round((total / (player.tokens.length * 56)) * 100);\n}\n\nexport function winner(player: Player): boolean {
+export function progressPercent(player: Player): number {\n  if (!player.tokens.length) return 0;\n  const total = player.tokens.reduce((sum, token) => sum + Math.max(0, Math.min(56, token.progress)), 0);\n  return Math.round((total / (player.tokens.length * 56)) * 100);\n}\n\nexport function assignPlacement(players: Player[], playerIndex: number): { players: Player[]; completed: boolean; nextTurn: number; winner: string | null } {
+  if (!players[playerIndex] || players[playerIndex].rank) {
+    return { players, completed: players.every(player => !!player.rank), nextTurn: -1, winner: players.find(player => player.rank === 1)?.name ?? null };
+  }
+  const place = players.filter(player => player.rank).length + 1;
+  let ranked = players.map((player, index) => index === playerIndex ? { ...player, rank: place } : player);
+  const unfinished = ranked.filter(player => !player.rank);
+  const completed = unfinished.length <= 1;
+  if (completed && unfinished.length === 1) ranked = ranked.map(player => player.rank ? player : { ...player, rank: place + 1 });
+  const nextTurn = completed ? -1 : Array.from({ length: ranked.length }, (_, offset) => (playerIndex + offset + 1) % ranked.length).find(index => !ranked[index].rank) ?? -1;
+  return { players: ranked, completed, nextTurn, winner: ranked.find(player => player.rank === 1)?.name ?? null };
+}
+
+export function winner(player: Player): boolean {
   return player.tokens.length === 4 && player.tokens.every(token => token.progress === 56);
 }
 
