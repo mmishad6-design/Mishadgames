@@ -47,11 +47,6 @@ function buildBoard(group:THREE.Group,players:Player[],turn:number){
    addCircle(group,px,.72,pz,.29,.10,mat(PALETTE[color]));
    addCircle(group,px,.78,pz,.20,.045,mat(darken(PALETTE[color],1.15).getStyle()));
   }
-  const active=players[turn]?.color===color;
-  if(active){
-   const ring=new THREE.Mesh(new THREE.RingGeometry(3.02,3.12,64),new THREE.MeshBasicMaterial({color:"#f4d28a",side:THREE.DoubleSide}));
-   ring.rotation.x=-Math.PI/2;ring.position.set(cx,.54,cz);group.add(ring);
-  }
   const playerName=players.find(p=>p.color===color)?.name||color.toUpperCase();
   addNameLabel(group,playerName,color,cx,cz-2.55);
  }
@@ -138,6 +133,8 @@ export default function ThreeBoard(props:Props){
  useEffect(()=>{
   const pieces=piecesRef.current,dice=diceRef.current;if(!pieces||!dice)return;
   pieces.clear();dice.clear();
+  const activeColor=props.players[props.turn]?.color;
+  if(activeColor){const base=BASES[activeColor],cx=base.x+2.5-7,cz=base.y+2.5-7;const ring=new THREE.Mesh(new THREE.RingGeometry(3.02,3.12,64),new THREE.MeshBasicMaterial({color:"#f4d28a",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(cx,.545,cz);pieces.add(ring);}
   const all=props.players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex?props.animatedToken.pos:tokenPosition(player.color,token,tokenIndex),moving:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex})));
   for(const piece of all){
    const [gx,gy]=piece.pos;const home=piece.player.tokens[piece.tokenIndex].progress===-1&&!piece.moving;
@@ -146,7 +143,7 @@ export default function ThreeBoard(props:Props){
    const stackIndex=stacked.findIndex(other=>other.playerIndex===piece.playerIndex&&other.tokenIndex===piece.tokenIndex);
    const dx=stacked.length>1?(stackIndex%2)*.27-.135:0,dz=stacked.length>1?Math.floor(stackIndex/2)*.27-.135:0;
    const selectable=piece.playerIndex===props.turn&&props.choices.includes(piece.tokenIndex);
-   makeToken(pieces,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&props.onMove(piece.tokenIndex));
+   makeToken(pieces,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex));
   }
   const color=props.players[props.turn]?.color;
   if(color){
