@@ -208,3 +208,72 @@
  100%{transform:rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
 }
 @media(prefers-reduced-motion:reduce){.board-svg .home-dice.is-rolling .dice-cube{animation:none}}
+
+
+/* Physical 3D board prototype: raised cell faces, visible tile sides and sculpted home platforms. */
+.board-svg .home-base-side{filter:brightness(.72) drop-shadow(0 3px 2px #17251f66)}
+.board-svg .home-base-face{filter:drop-shadow(0 2px 1px #17251f55)}
+.board-svg .track-tile-side{filter:brightness(.72)}
+.board-svg .track-tile-face{filter:drop-shadow(0 1.8px 1px #17251f55)}
+.board-svg .lane-tile-side{filter:brightness(.68)}
+.board-svg .lane-tile-face{filter:drop-shadow(0 1.5px 1px #17251f66)}
+.board-svg .home-base-face,.board-svg .track-tile-face,.board-svg .lane-tile-face{paint-order:stroke fill}
+.board-frame{
+ padding:15px;
+ background:linear-gradient(145deg,#f4e5c4 0%,#c7ae80 54%,#7d6847 100%);
+ box-shadow:0 30px 58px #0009,inset 0 3px 5px #fff9,inset 0 -10px 14px #44351f66;
+}
+.board-svg{
+ transform:rotateX(9deg) rotateZ(-.65deg);
+ transform-origin:center 58%;
+ box-shadow:0 25px 27px #17251f66,0 5px 0 #75664b,0 10px 0 #4c412f,inset 0 0 0 3px #fff9;
+}
+.app-shell[data-theme="dark"] .board-frame{
+ background:linear-gradient(145deg,#718174 0%,#40564b 54%,#24332d 100%);
+ box-shadow:0 30px 58px #000b,inset 0 3px 5px #ffffff30,inset 0 -10px 14px #0008;
+}
+.app-shell[data-theme="dark"] .board-svg{
+ box-shadow:0 25px 27px #0009,0 5px 0 #24332d,0 10px 0 #17231f,inset 0 0 0 3px #ffffff22;
+}
+@media(max-width:600px){
+ .board-frame{padding:8px;perspective:900px}
+ .board-svg{transform:rotateX(7deg) rotateZ(-.45deg)}
+}
+@media(prefers-reduced-motion:reduce){.board-svg{transform:none}}
+
+
+/* True 3D board rendered with Three.js geometry. */
+.board-3d-stage{
+ position:relative;width:100%;aspect-ratio:1;min-height:280px;overflow:hidden;
+ border:3px solid #263d37;border-radius:9px;background:#d9c9a7;
+ box-shadow:inset 0 0 0 2px #fff8e9,0 18px 30px #17251f33;
+ touch-action:pan-y;
+}
+.board-3d-stage canvas.ludo-3d-canvas{display:block;width:100%;height:100%;outline:none;touch-action:pan-y}
+.board-3d-caption{
+ position:absolute;z-index:2;right:10px;top:10px;padding:6px 9px;border-radius:20px;
+ border:1px solid #ffffff75;background:#203a31b8;color:#fff3d5;
+ font-size:8px;font-weight:800;letter-spacing:1.2px;pointer-events:none;
+}
+.app-shell[data-theme="dark"] .board-3d-stage{border-color:#a8a184;box-shadow:inset 0 0 0 2px #ffffff22,0 18px 30px #0007}
+@media(max-width:600px){.board-3d-stage{min-height:0;border-width:2px}.board-3d-caption{top:7px;right:7px;font-size:7px;padding:5px 7px}}
+
+.board-3d-accessibility{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.board-3d-accessibility button:focus{position:fixed;z-index:10;left:12px;bottom:12px;width:auto;height:auto;padding:10px;background:#fff;color:#203a31;clip:auto;overflow:visible}
+
+
+/* Per-device board rendering preference and 3D camera controls. */
+.game-heading-actions{display:flex;align-items:center;gap:9px}
+.board-view-switch{display:inline-flex;gap:3px;padding:3px;border:1px solid #536763;border-radius:8px;background:#1d3032}
+.board-view-switch button{min-width:42px;padding:7px 10px;border:0;border-radius:5px;background:transparent;color:#d6d9ce;font-size:10px;font-weight:800;letter-spacing:.5px}
+.board-view-switch button.selected{background:#d8c18d;color:#203a31;box-shadow:0 1px 4px #0003}
+.board-3d-wrap{width:100%}
+.board-3d-stage{touch-action:none}
+.board-3d-stage canvas.ludo-3d-canvas{touch-action:none;cursor:grab}
+.board-3d-stage canvas.ludo-3d-canvas:active{cursor:grabbing}
+.board-3d-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 2px 1px;color:#758176;font-size:10px;line-height:1.4}
+.board-3d-tools button{flex:none;border:1px solid #b99a60;border-radius:7px;background:transparent;color:#9a7743;padding:8px 11px;font-size:10px;font-weight:800}
+.app-shell[data-theme="dark"] .board-3d-tools{color:#b1b9ad}
+.app-shell[data-theme="dark"] .board-3d-tools button{color:#e4c27f;border-color:#9c8051}
+@media(max-width:560px){.game-heading-actions{gap:6px}.board-view-switch button{min-width:36px;padding:7px 8px}.board-3d-tools{align-items:flex-start;font-size:9px}.board-3d-tools button{padding:7px 9px}}
+@media(prefers-reduced-motion:reduce){.board-3d-stage canvas.ludo-3d-canvas{cursor:default}}
