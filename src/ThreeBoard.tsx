@@ -229,7 +229,7 @@ export default function ThreeBoard(props:Props){
    makePips(cube,layout.top,"top");makePips(cube,layout.front,"front");makePips(cube,layout.side,"side");
    cube.traverse(object=>{object.userData.kind="dice";});dice.add(cube);
   }
- },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken]);
+ },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken,props.timerSeconds,props.timerActive]);
  return <div className="board-3d-wrap">
   <div className="board-3d-stage" ref={mountRef} role="group" aria-label="3D Ludo board">
    <span className="board-3d-caption">3D BOARD · INTERACTIVE</span>
