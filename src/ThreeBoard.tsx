@@ -29,11 +29,13 @@ function addStar(parent:THREE.Group,x:number,z:number){
  const star=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:"#d4a94f",emissive:"#8b6425",emissiveIntensity:.32,metalness:.55,roughness:.3,side:THREE.DoubleSide}));star.rotation.x=-Math.PI/2;star.position.set(x,.606,z);star.castShadow=true;parent.add(star);
  const center=new THREE.Mesh(new THREE.SphereGeometry(.045,12,10),mat("#fff0bd",.25,.45));center.position.set(x,.635,z);parent.add(center);
 }
-function addProgressLabel(parent:THREE.Group,value:string,x:number,z:number){
- const canvas=document.createElement("canvas");canvas.width=384;canvas.height=96;const ctx=canvas.getContext("2d");if(!ctx)return;
- ctx.fillStyle="rgba(22,43,35,.88)";ctx.beginPath();ctx.roundRect(8,8,368,80,24);ctx.fill();ctx.strokeStyle="#d7b66e";ctx.lineWidth=5;ctx.stroke();
- ctx.fillStyle="#fff0c8";ctx.font="bold 39px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(value,192,49,340);
- const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.position.set(x,.99,z);sprite.scale.set(1.65,.42,1);parent.add(sprite);
+function addProgressLabel(parent:THREE.Group,percent:number,rank:string,x:number,z:number){
+ const canvas=document.createElement("canvas");canvas.width=512;canvas.height=160;const ctx=canvas.getContext("2d");if(!ctx)return;
+ ctx.fillStyle="rgba(17,39,31,.96)";ctx.beginPath();ctx.roundRect(8,8,496,144,28);ctx.fill();ctx.strokeStyle="#e2c27d";ctx.lineWidth=7;ctx.stroke();
+ ctx.fillStyle="#f4dba8";ctx.font="bold 25px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("PLAYER PROGRESS",256,48);
+ ctx.fillStyle="#fff8e8";ctx.font="bold 58px Arial";ctx.fillText(percent+"%",rank?218:256,108);
+ if(rank){ctx.fillStyle="#f4d28a";ctx.font="bold 24px Arial";ctx.fillText(rank,405,108);}
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.position.set(x,1.08,z);sprite.scale.set(2.35,.74,1);parent.add(sprite);
 }
 function addNameLabel(parent:THREE.Group,name:string,x:number,z:number){
  const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;
@@ -202,7 +204,7 @@ export default function ThreeBoard(props:Props){
    if(!token){token=makeToken(tokenLayer,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex)) as THREE.Group;token.userData.target=target.clone();tokenMapRef.current.set(key,token);}
    else {token.userData.target=target;token.userData.onClick=()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex);token.traverse(object=>{if(object.userData.kind==="token")object.userData.onClick=token!.userData.onClick;});}
   }
-  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?` · ${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,`${percent}% COMPLETE${rank}`,cx,cz-1.65);}
+  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?`${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,percent,rank,cx,cz-1.65);}
   const color=props.players[props.turn]?.color;
   if(color){
    const base=BASES[color],px=base.x+(color==="red"||color==="blue"?5.25:.75)-7.5,pz=base.y+(color==="red"||color==="green"?5.25:.75)-7.5;
