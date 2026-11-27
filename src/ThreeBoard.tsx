@@ -97,7 +97,7 @@ function makePips(parent:THREE.Group,face:number,axis:"top"|"front"|"side"){
 }
 export default function ThreeBoard(props:Props){
  const mountRef=useRef<HTMLDivElement|null>(null);
- const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),tokenLayerRef=useRef<THREE.Group|null>(null),ringLayerRef=useRef<THREE.Group|null>(null),tokenMapRef=useRef<Map<string,THREE.Group>>(new Map()),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
+ const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),tokenLayerRef=useRef<THREE.Group|null>(null),ringLayerRef=useRef<THREE.Group|null>(null),tokenMapRef=useRef<Map<string,THREE.Group>>(new Map()),resetViewRef=useRef<()=>void>(()=>{}),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
  callbacksRef.current={onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll};
  useEffect(()=>{
   const mount=mountRef.current;if(!mount)return;
@@ -108,7 +108,7 @@ export default function ThreeBoard(props:Props){
   renderer.domElement.className="ludo-3d-canvas";renderer.domElement.setAttribute("aria-label","Interactive three dimensional Ludo board");
   mount.appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color("#d9c9a7");scene.fog=new THREE.Fog("#d9c9a7",28,55);
-  const camera=new THREE.PerspectiveCamera(34,1,.1,100);camera.position.set(11.5,20,22);camera.lookAt(0,.1,0);
+  const camera=new THREE.PerspectiveCamera(34,1,.1,100);camera.position.set(11.5,20,22);camera.lookAt(0,.1,0);\n  const cameraTarget=new THREE.Vector3(0,.1,0);let radius=camera.position.distanceTo(cameraTarget),theta=Math.atan2(camera.position.x-cameraTarget.x,camera.position.z-cameraTarget.z),phi=Math.acos((camera.position.y-cameraTarget.y)/radius);\n  const updateCamera=()=>{phi=THREE.MathUtils.clamp(phi,.28,Math.PI/2.05);radius=THREE.MathUtils.clamp(radius,15,42);camera.position.set(cameraTarget.x+radius*Math.sin(phi)*Math.sin(theta),cameraTarget.y+radius*Math.cos(phi),cameraTarget.z+radius*Math.sin(phi)*Math.cos(theta));camera.lookAt(cameraTarget);};\n  const resetCamera=()=>{cameraTarget.set(0,.1,0);radius=30;theta=Math.atan2(11.5,22);phi=Math.acos(20/Math.sqrt(11.5*11.5+20*20+22*22));updateCamera();};resetViewRef.current=resetCamera;
   scene.add(new THREE.HemisphereLight("#fff4dc","#42564a",2.1));
   const key=new THREE.DirectionalLight("#fff0d2",3.2);key.position.set(-8,17,10);key.castShadow=true;key.shadow.mapSize.set(1536,1536);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
   const fill=new THREE.DirectionalLight("#b7d4ff",.75);fill.position.set(10,9,-12);scene.add(fill);
@@ -127,7 +127,7 @@ export default function ThreeBoard(props:Props){
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
   let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*30;die.rotation.y+=delta*38;die.rotation.z+=delta*24;die.position.y=1.28+Math.sin(clock.elapsedTime*18)*.07;}}renderer.render(scene,camera);};render();
-  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
+  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointerDown);renderer.domElement.removeEventListener("pointermove",onPointerMove);renderer.domElement.removeEventListener("pointerup",onPointerUp);renderer.domElement.removeEventListener("pointercancel",onPointerUp);renderer.domElement.removeEventListener("wheel",onWheel);resetViewRef.current=()=>{};renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
  },[]);
  useEffect(()=>{
   const tokenLayer=tokenLayerRef.current,ringLayer=ringLayerRef.current,dice=diceRef.current;if(!tokenLayer||!ringLayer||!dice)return;
