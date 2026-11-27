@@ -10,8 +10,8 @@ type Props={
 const faceLayout:Record<number,{top:number;side:number;front:number}>={1:{top:1,side:3,front:1},2:{top:2,side:4,front:2},3:{top:3,side:5,front:3},4:{top:4,side:6,front:4},5:{top:5,side:1,front:5},6:{top:6,side:2,front:6}};
 const darken=(hex:string,factor:number)=>new THREE.Color(hex).multiplyScalar(factor);
 const mat=(color:string,roughness=.72)=>new THREE.MeshStandardMaterial({color,roughness,metalness:.02});
-function addBox(parent:THREE.Group,x:number,y:number,z:number,w:number,h:number,d:number,material:THREE.Material,bevel=0){
- const geometry=bevel>0?new THREE.BoxGeometry(w,h,d):new THREE.BoxGeometry(w,h,d);
+function addBox(parent:THREE.Group,x:number,y:number,z:number,w:number,h:number,d:number,material:THREE.Material){
+ const geometry=new THREE.BoxGeometry(w,h,d);
  const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
 }
 function addCircle(parent:THREE.Group,x:number,y:number,z:number,r:number,depth:number,material:THREE.Material){
@@ -21,7 +21,7 @@ function addTriangle(parent:THREE.Group,points:[number,number][],color:string){
  const shape=new THREE.Shape();shape.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)shape.lineTo(points[i][0],points[i][1]);shape.closePath();
  const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),mat(color));mesh.rotation.x=-Math.PI/2;mesh.position.y=.73;mesh.receiveShadow=true;parent.add(mesh);
 }
-function addNameLabel(parent:THREE.Group,name:string,color:string,x:number,z:number){
+function addNameLabel(parent:THREE.Group,name:string,x:number,z:number){
  const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;
  const ctx=canvas.getContext("2d");if(!ctx)return;
  ctx.fillStyle="#fff8e9";ctx.font="bold 48px Arial";ctx.textAlign="center";ctx.textBaseline="middle";
@@ -30,8 +30,8 @@ function addNameLabel(parent:THREE.Group,name:string,color:string,x:number,z:num
  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));
  sprite.position.set(x,1.02,z);sprite.scale.set(2.7,.68,1);parent.add(sprite);
 }
-function buildBoard(group:THREE.Group,players:Player[],turn:number){
- const wood=mat("#263a32"),edge=mat("#182c26"),white=mat("#fffdf7"),line=mat("#b9b8aa");
+function buildBoard(group:THREE.Group,players:Player[]){
+ const wood=mat("#263a32"),edge=mat("#182c26"),white=mat("#fffdf7");
  addBox(group,0,-.18,0,15.45,.55,15.45,wood);
  addBox(group,0,-.48,0,15.7,.12,15.7,edge);
  // Four raised home platforms and their inset token bays.
@@ -48,7 +48,7 @@ function buildBoard(group:THREE.Group,players:Player[],turn:number){
    addCircle(group,px,.78,pz,.20,.045,mat(darken(PALETTE[color],1.15).getStyle()));
   }
   const playerName=players.find(p=>p.color===color)?.name||color.toUpperCase();
-  addNameLabel(group,playerName,color,cx,cz-2.55);
+  addNameLabel(group,playerName,cx,cz-2.55);
  }
  // Shared 52-cell track.
  for(let i=0;i<TRACK.length;i++){
@@ -71,10 +71,10 @@ function buildBoard(group:THREE.Group,players:Player[],turn:number){
 }
 function makeToken(parent:THREE.Group,color:string,index:number,x:number,z:number,selectable:boolean,onClick:()=>void){
  const token=new THREE.Group();token.position.set(x,.82,z);token.userData={kind:"token",index,onClick};
- const body=mat(color,.36),highlight=new THREE.MeshStandardMaterial({color:"#ffffff",roughness:.22,metalness:.08});
+ const body=mat(color,.36);
  const base=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.16,28),mat(darken(color,.58).getStyle()));base.position.y=.02;base.castShadow=true;token.add(base);
  const stem=new THREE.Mesh(new THREE.ConeGeometry(.22,.48,28),body);stem.position.y=.31;stem.castShadow=true;token.add(stem);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.19,24,18),highlight);head.material=mat(color,.3);head.position.y=.59;head.castShadow=true;token.add(head);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.19,24,18),mat(color,.3));head.position.y=.59;head.castShadow=true;token.add(head);
  const glint=new THREE.Mesh(new THREE.SphereGeometry(.055,12,10),new THREE.MeshBasicMaterial({color:"#ffffff"}));glint.position.set(-.07,.68,-.11);token.add(glint);
  if(selectable){const ring=new THREE.Mesh(new THREE.RingGeometry(.31,.37,32),new THREE.MeshBasicMaterial({color:"#e5c47e",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=-.05;token.add(ring);}
  token.traverse(object=>{if((object as THREE.Mesh).isMesh)object.userData={kind:"token",index,onClick};});
@@ -97,7 +97,6 @@ function makePips(parent:THREE.Group,face:number,axis:"top"|"front"|"side"){
 }
 export default function ThreeBoard(props:Props){
  const mountRef=useRef<HTMLDivElement|null>(null);
- const sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null),rendererRef=useRef<THREE.WebGLRenderer|null>(null);
  const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
  callbacksRef.current={onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll};
  useEffect(()=>{
@@ -113,9 +112,9 @@ export default function ThreeBoard(props:Props){
   scene.add(new THREE.HemisphereLight("#fff4dc","#42564a",2.1));
   const key=new THREE.DirectionalLight("#fff0d2",3.2);key.position.set(-8,17,10);key.castShadow=true;key.shadow.mapSize.set(1536,1536);key.shadow.camera.left=-12;key.shadow.camera.right=12;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;scene.add(key);
   const fill=new THREE.DirectionalLight("#b7d4ff",.75);fill.position.set(10,9,-12);scene.add(fill);
-  const board=new THREE.Group();scene.add(board);buildBoard(board,props.players,props.turn);
+  const board=new THREE.Group();scene.add(board);buildBoard(board,props.players);
   const pieces=new THREE.Group(),dice=new THREE.Group();scene.add(pieces,dice);
-  sceneRef.current=scene;cameraRef.current=camera;rendererRef.current=renderer;piecesRef.current=pieces;diceRef.current=dice;
+  piecesRef.current=pieces;diceRef.current=dice;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const onPointer=(event:PointerEvent)=>{
    const rect=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
@@ -128,7 +127,7 @@ export default function ThreeBoard(props:Props){
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
   let frame=0;const render=()=>{frame=requestAnimationFrame(render);renderer.render(scene,camera);};render();
-  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});sceneRef.current=null;cameraRef.current=null;rendererRef.current=null;piecesRef.current=null;diceRef.current=null;};
+  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointer);renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;};
  },[]);
  useEffect(()=>{
   const pieces=piecesRef.current,dice=diceRef.current;if(!pieces||!dice)return;
@@ -156,7 +155,7 @@ export default function ThreeBoard(props:Props){
    if(props.rolling){cube.rotation.x+=.5;cube.rotation.y+=.8;}
    cube.traverse(object=>{object.userData={kind:"dice"};});dice.add(cube);
   }
- },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.canRoll,props.animatedToken]);
+ },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken]);
  return <div className="board-3d-stage" ref={mountRef} role="group" aria-label="3D Ludo board">
   <span className="board-3d-caption">3D BOARD · INTERACTIVE</span>
  </div>;
