@@ -151,9 +151,7 @@ export function assignPlacement(players: Player[], playerIndex: number): { playe
   }
   const place = players.filter(player => player.rank).length + 1;
   let ranked = players.map((player, index) => index === playerIndex ? { ...player, rank: place } : player);
-  const unfinished = ranked.filter(player => !player.rank);
-  const completed = unfinished.length <= 1;
-  if (completed && unfinished.length === 1) ranked = ranked.map(player => player.rank ? player : { ...player, rank: place + 1 });
+  const completed = ranked.every(player => !!player.rank);
   const nextTurn = completed ? -1 : Array.from({ length: ranked.length }, (_, offset) => (playerIndex + offset + 1) % ranked.length).find(index => !ranked[index].rank) ?? -1;
   return { players: ranked, completed, nextTurn, winner: ranked.find(player => player.rank === 1)?.name ?? null };
 }
