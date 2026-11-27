@@ -162,7 +162,10 @@ export default function ThreeBoard(props:Props){
    cube.traverse(object=>{object.userData.kind="dice";});dice.add(cube);
   }
  },[props.players,props.turn,props.choices,props.dice,props.lastDice,props.rolling,props.animatedToken]);
- return <div className="board-3d-stage" ref={mountRef} role="group" aria-label="3D Ludo board">
-  <span className="board-3d-caption">3D BOARD · INTERACTIVE</span>
+ return <div className="board-3d-wrap">
+  <div className="board-3d-stage" ref={mountRef} role="group" aria-label="3D Ludo board">
+   <span className="board-3d-caption">3D BOARD · INTERACTIVE</span>
+  </div>
+  <div className="board-3d-tools"><span>Drag to move · Two fingers to rotate · Pinch or scroll to zoom</span><button type="button" onClick={()=>resetViewRef.current()}>↺ Reset View</button></div>
  </div>;
 }
