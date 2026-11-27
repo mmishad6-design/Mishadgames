@@ -4,7 +4,7 @@ const DICE_DOTS:Record<number,[number,number][]> = {
   4:[[-14,-14],[14,-14],[-14,14],[14,14]],5:[[-14,-14],[14,-14],[0,0],[-14,14],[14,14]],
   6:[[-14,-14],[14,-14],[-14,0],[14,0],[-14,14],[14,14]]
 };
-export default function TwoDBoard({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null}){
+export default function TwoDBoard({players,turn,choices,dice,lastDice,rolling,canRoll,onRoll,onMove,animatedToken,turnSeconds,timerActive}:{players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(i:number)=>void;animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null;turnSeconds:number;timerActive:boolean}){
  const displayValue=dice??lastDice??5;
  const faceLayout:Record<number,{top:number;side:number}>={1:{top:2,side:3},2:{top:1,side:4},3:{top:1,side:5},4:{top:2,side:6},5:{top:3,side:1},6:{top:4,side:2}};
  const faceDots=(value:number)=>DICE_DOTS[value].map(([x,y])=>[x/14,y/14] as [number,number]);
@@ -33,12 +33,13 @@ export default function TwoDBoard({players,turn,choices,dice,lastDice,rolling,ca
   </g>)}
   {Object.entries(HOME_LANES).map(([color,cells])=>cells.map(([x,y],index)=><rect key={color+index} x={x*40} y={y*40} width="40" height="40" fill={PALETTE[color as Color]} stroke="#b8b9af" strokeWidth="1.2"/>))}
   <g stroke="#283b36" strokeWidth="1.5"><path d="M240 240H360V360H240Z" fill="#fffdf7"/><path d="M240 240L300 300L240 360Z" fill={PALETTE.red}/><path d="M240 240L360 240L300 300Z" fill={PALETTE.green}/><path d="M360 240L360 360L300 300Z" fill={PALETTE.yellow}/><path d="M240 360L360 360L300 300Z" fill={PALETTE.blue}/></g>
-  {COLORS.map(color=>{const base=BASES[color];const playerName=players.find(player=>player.color===color)?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;return <g key={color}>
-   <text x={base.x*40+120} y={base.y*40+23} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={nameSize} fontWeight="500" letterSpacing="0" fill="#fff">{playerName}</text>
+  {COLORS.map(color=>{const base=BASES[color];const player=players.find(player=>player.color===color);const playerName=player?.name||COLOR_NAMES[color];const nameSize=playerName.length>16?8.5:playerName.length>11?9.5:11;const progress=player?Math.round(player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0)/(player.tokens.length*56)*100):0;return <g key={color}>
+   <text x={base.x*40+120} y={base.y*40+20} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={nameSize} fontWeight="700" letterSpacing="0" fill="#fff">{playerName}{player?.rank?` · ${player.rank===1?"1st":player.rank===2?"2nd":player.rank===3?"3rd":player.rank+"th"}`:""}</text>
+   {player&&<g><rect x={base.x*40+51} y={base.y*40+25} width="138" height="18" rx="9" fill="#17372d" fillOpacity=".9" stroke="#f4d28a" strokeWidth="1"/><rect x={base.x*40+62} y={base.y*40+47} width="116" height="4" rx="1.25" fill="#ffffff55"/><rect x={base.x*40+62} y={base.y*40+47} width={116*progress/100} height="4" rx="1.25" fill="#f4d28a"/><text x={base.x*40+120} y={base.y*40+36.5} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="11" fontWeight="900" letterSpacing=".6" fill="#fff8e8">PROGRESS  {progress}%</text></g>}{player&&turn===players.findIndex(p=>p.color===color)&&timerActive&&<g className="home-turn-timer" role="status" aria-label={`Automatic move in ${turnSeconds} seconds`}><rect x={base.x*40+75} y={base.y*40+58} width="90" height="23" rx="11.5" fill="#17372d" stroke="#f4d28a" strokeWidth="1.2"/><text x={base.x*40+120} y={base.y*40+74} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="12" fontWeight="900" fill="#fff8e8">{turnSeconds}s</text><rect x={base.x*40+83} y={base.y*40+84} width="74" height="3.5" rx="1.75" fill="#ffffff55"/><rect x={base.x*40+83} y={base.y*40+84} width={74*(turnSeconds/45)} height="3.5" rx="1.75" fill="#f4d28a"/></g>}
    {players[turn]?.color===color&&<g pointerEvents="none">
     <rect x={base.x*40+7} y={base.y*40+7} width="226" height="226" rx="12" fill="none" stroke="#f4d28a" strokeWidth="5"/>
-    <rect x={base.x*40+82} y={base.y*40+31} width="76" height="19" rx="9.5" fill="#f4d28a"/>
-    <text x={base.x*40+120} y={base.y*40+44.5} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="9" fontWeight="800" letterSpacing=".8" fill="#26372f">CURRENT TURN</text>
+    <rect x={base.x*40+82} y={base.y*40+210} width="76" height="19" rx="9.5" fill="#f4d28a"/>
+    <text x={base.x*40+120} y={base.y*40+223.5} textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="9" fontWeight="800" letterSpacing=".8" fill="#26372f">CURRENT TURN</text>
    </g>}
   </g>})}
   {pieces.map(piece=>{

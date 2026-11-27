@@ -6,6 +6,7 @@ type Props={
  players:Player[];turn:number;choices:number[];dice:number|null;lastDice:number|null;
  rolling:boolean;canRoll:boolean;onRoll:()=>void;onMove:(index:number)=>void;
  animatedToken:{playerIndex:number;tokenIndex:number;pos:[number,number]}|null;
+ timerSeconds:number;timerActive:boolean;
 };
 const faceLayout:Record<number,{top:number;side:number;front:number}>={1:{top:1,side:3,front:1},2:{top:2,side:4,front:2},3:{top:3,side:5,front:3},4:{top:4,side:6,front:4},5:{top:5,side:1,front:5},6:{top:6,side:2,front:6}};
 const darken=(hex:string,factor:number)=>new THREE.Color(hex).multiplyScalar(factor);
@@ -20,6 +21,30 @@ function addCircle(parent:THREE.Group,x:number,y:number,z:number,r:number,depth:
 function addTriangle(parent:THREE.Group,points:[number,number][],color:string){
  const shape=new THREE.Shape();shape.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)shape.lineTo(points[i][0],points[i][1]);shape.closePath();
  const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),mat(color));mesh.rotation.x=-Math.PI/2;mesh.position.y=.73;mesh.receiveShadow=true;parent.add(mesh);
+}
+function addStar(parent:THREE.Group,x:number,z:number){
+ const shape=new THREE.Shape();
+ for(let i=0;i<10;i++){const angle=-Math.PI/2+i*Math.PI/5,r=i%2===0?.29:.13,px=Math.cos(angle)*r,pz=Math.sin(angle)*r;if(i===0)shape.moveTo(px,pz);else shape.lineTo(px,pz);}
+ shape.closePath();
+ const glow=new THREE.Mesh(new THREE.CircleGeometry(.34,32),new THREE.MeshBasicMaterial({color:"#e8c77e",transparent:true,opacity:.24,side:THREE.DoubleSide}));glow.rotation.x=-Math.PI/2;glow.position.set(x,.596,z);parent.add(glow);
+ const star=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:"#d4a94f",emissive:"#8b6425",emissiveIntensity:.32,metalness:.55,roughness:.3,side:THREE.DoubleSide}));star.rotation.x=-Math.PI/2;star.position.set(x,.606,z);star.castShadow=true;parent.add(star);
+ const center=new THREE.Mesh(new THREE.SphereGeometry(.045,12,10),mat("#fff0bd",.25,.45));center.position.set(x,.635,z);parent.add(center);
+}
+function addProgressLabel(parent:THREE.Group,percent:number,rank:string,x:number,z:number){
+ const canvas=document.createElement("canvas");canvas.width=512;canvas.height=160;const ctx=canvas.getContext("2d");if(!ctx)return;
+ ctx.fillStyle="rgba(17,39,31,.96)";ctx.beginPath();ctx.roundRect(8,8,496,144,28);ctx.fill();ctx.strokeStyle="#e2c27d";ctx.lineWidth=7;ctx.stroke();
+ ctx.fillStyle="#f4dba8";ctx.font="bold 25px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("PLAYER PROGRESS",256,48);
+ ctx.fillStyle="#fff8e8";ctx.font="bold 58px Arial";ctx.fillText(percent+"%",rank?218:256,108);
+ if(rank){ctx.fillStyle="#f4d28a";ctx.font="bold 24px Arial";ctx.fillText(rank,405,108);}
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.position.set(x,1.08,z);sprite.scale.set(2.35,.74,1);parent.add(sprite);
+}
+function addTimerLabel(parent:THREE.Group,seconds:number,x:number,z:number){
+ const canvas=document.createElement("canvas");canvas.width=320;canvas.height=112;const ctx=canvas.getContext("2d");if(!ctx)return;
+ ctx.fillStyle="rgba(17,39,31,.97)";ctx.beginPath();ctx.roundRect(5,5,310,102,24);ctx.fill();ctx.strokeStyle="#e2c27d";ctx.lineWidth=5;ctx.stroke();
+ ctx.fillStyle="#f4dba8";ctx.font="bold 23px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("AUTO MOVE IN",160,34);
+ ctx.fillStyle="#fff8e8";ctx.font="bold 42px Arial";ctx.fillText(seconds+"s",160,75);
+ ctx.fillStyle="#ffffff55";ctx.fillRect(42,91,236,7);ctx.fillStyle="#f4d28a";ctx.fillRect(42,91,236*Math.max(0,Math.min(45,seconds))/45,7);
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.position.set(x,1.12,z);sprite.scale.set(1.72,.60,1);parent.add(sprite);
 }
 function addNameLabel(parent:THREE.Group,name:string,x:number,z:number){
  const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;
@@ -71,6 +96,7 @@ function buildBoard(group:THREE.Group,players:Player[]){
   const tile=addBox(group,x-7,.47,z-7,.96,.22,.96,mat(start?PALETTE[start]:safe?"#f2e8cb":"#fffdf7"));
   tile.userData={trackIndex:i};
   addBox(group,x-7,.32,z-7,.99,.12,.99,mat("#8c8779"));
+  if(safe)addStar(group,x-7,z-7);
  }
  // Private six-cell home lanes.
  for(const color of COLORS)for(const [x,z] of HOME_LANES[color]){
@@ -127,7 +153,7 @@ function makePips(parent:THREE.Group,face:number,axis:"top"|"front"|"side"){
 }
 export default function ThreeBoard(props:Props){
  const mountRef=useRef<HTMLDivElement|null>(null);
- const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),tokenLayerRef=useRef<THREE.Group|null>(null),ringLayerRef=useRef<THREE.Group|null>(null),tokenMapRef=useRef<Map<string,THREE.Group>>(new Map()),resetViewRef=useRef<()=>void>(()=>{}),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
+ const piecesRef=useRef<THREE.Group|null>(null),diceRef=useRef<THREE.Group|null>(null),tokenLayerRef=useRef<THREE.Group|null>(null),ringLayerRef=useRef<THREE.Group|null>(null),progressLayerRef=useRef<THREE.Group|null>(null),tokenMapRef=useRef<Map<string,THREE.Group>>(new Map()),resetViewRef=useRef<()=>void>(()=>{}),callbacksRef=useRef({onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll});
  callbacksRef.current={onRoll:props.onRoll,onMove:props.onMove,canRoll:props.canRoll};
  useEffect(()=>{
   const mount=mountRef.current;if(!mount)return;
@@ -150,6 +176,7 @@ export default function ThreeBoard(props:Props){
   const fill=new THREE.DirectionalLight("#c3d9ff",.9);fill.position.set(10,9,-12);scene.add(fill);
   const rimLight=new THREE.DirectionalLight("#f4d49a",.65);rimLight.position.set(3,8,14);scene.add(rimLight);
   const board=new THREE.Group();scene.add(board);buildBoard(board,props.players);
+  const progressLayer=new THREE.Group();scene.add(progressLayer);progressLayerRef.current=progressLayer;
   const pieces=new THREE.Group(),dice=new THREE.Group(),tokenLayer=new THREE.Group(),ringLayer=new THREE.Group();pieces.add(ringLayer,tokenLayer);scene.add(pieces,dice);
   piecesRef.current=pieces;diceRef.current=dice;tokenLayerRef.current=tokenLayer;ringLayerRef.current=ringLayer;tokenMapRef.current.clear();
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),activePointers=new Map<number,{x:number;y:number}>();
@@ -164,11 +191,12 @@ export default function ThreeBoard(props:Props){
   const resize=()=>{const width=mount.clientWidth||600,height=mount.clientHeight||width;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();
   let frame=0;const clock=new THREE.Clock();const render=()=>{frame=requestAnimationFrame(render);const delta=Math.min(clock.getDelta(),.05);for(const token of tokenLayer.children as THREE.Group[]){const target=token.userData.target as THREE.Vector3|undefined;if(target){token.position.lerp(target,1-Math.exp(-delta*16));if(token.position.distanceToSquared(target)<.0004)token.position.copy(target);}token.children.forEach(child=>{if(child.userData.isSelectionRing){const pulse=1+Math.sin(clock.elapsedTime*5)*.055;child.scale.setScalar(pulse);}});}for(const die of dice.children as THREE.Group[]){if(die.userData.isRolling){die.rotation.x+=delta*30;die.rotation.y+=delta*38;die.rotation.z+=delta*24;die.position.y=1.28+Math.sin(clock.elapsedTime*18)*.07;}}renderer.render(scene,camera);};render();
-  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointerDown);renderer.domElement.removeEventListener("pointermove",onPointerMove);renderer.domElement.removeEventListener("pointerup",onPointerUp);renderer.domElement.removeEventListener("pointercancel",onPointerUp);renderer.domElement.removeEventListener("wheel",onWheel);resetViewRef.current=()=>{};renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;tokenMapRef.current.clear();};
+  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener("pointerdown",onPointerDown);renderer.domElement.removeEventListener("pointermove",onPointerMove);renderer.domElement.removeEventListener("pointerup",onPointerUp);renderer.domElement.removeEventListener("pointercancel",onPointerUp);renderer.domElement.removeEventListener("wheel",onWheel);resetViewRef.current=()=>{};renderer.dispose();mount.removeChild(renderer.domElement);scene.traverse(object=>{const mesh=object as THREE.Mesh;if(mesh.geometry)mesh.geometry.dispose();const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials?.forEach(material=>material?.dispose());});piecesRef.current=null;diceRef.current=null;tokenLayerRef.current=null;ringLayerRef.current=null;progressLayerRef.current=null;tokenMapRef.current.clear();};
  },[]);
  useEffect(()=>{
-  const tokenLayer=tokenLayerRef.current,ringLayer=ringLayerRef.current,dice=diceRef.current;if(!tokenLayer||!ringLayer||!dice)return;
+  const tokenLayer=tokenLayerRef.current,ringLayer=ringLayerRef.current,dice=diceRef.current,progressLayer=progressLayerRef.current;if(!tokenLayer||!ringLayer||!dice||!progressLayer)return;
   ringLayer.clear();dice.clear();
+  progressLayer.traverse(object=>{const sprite=object as THREE.Sprite;if((sprite as any).isSprite&&sprite.material){const material=sprite.material as THREE.SpriteMaterial;material.map?.dispose();material.dispose();}});progressLayer.clear();
   const activeColor=props.players[props.turn]?.color;
   if(activeColor){const base=BASES[activeColor],cx=base.x+2.5-7,cz=base.y+2.5-7;const ring=new THREE.Mesh(new THREE.RingGeometry(3.02,3.12,64),new THREE.MeshBasicMaterial({color:"#f4d28a",side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(cx,.545,cz);ringLayer.add(ring);}
   const all=props.players.flatMap((player,playerIndex)=>player.tokens.map((token,tokenIndex)=>({player,playerIndex,tokenIndex,pos:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex?props.animatedToken.pos:tokenPosition(player.color,token,tokenIndex),moving:props.animatedToken?.playerIndex===playerIndex&&props.animatedToken.tokenIndex===tokenIndex})));
@@ -185,6 +213,7 @@ export default function ThreeBoard(props:Props){
    if(!token){token=makeToken(tokenLayer,PALETTE[piece.player.color],piece.tokenIndex,x+dx,z+dz,selectable,()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex)) as THREE.Group;token.userData.target=target.clone();tokenMapRef.current.set(key,token);}
    else {token.userData.target=target;token.userData.onClick=()=>selectable&&callbacksRef.current.onMove(piece.tokenIndex);token.traverse(object=>{if(object.userData.kind==="token")object.userData.onClick=token!.userData.onClick;});}
   }
+  for(const player of props.players){const base=BASES[player.color],cx=base.x+2.5-7,cz=base.y+2.5-7;const total=player.tokens.reduce((sum,token)=>sum+Math.max(0,Math.min(56,token.progress)),0);const percent=Math.round(total/(player.tokens.length*56)*100);const rank=player.rank?`${player.rank===1?"1ST":player.rank===2?"2ND":player.rank===3?"3RD":player.rank+"TH"}`:"";addProgressLabel(progressLayer,percent,rank,cx,cz-1.65);if(props.timerActive&&props.players[props.turn]?.color===player.color)addTimerLabel(progressLayer,props.timerSeconds,cx,cz-0.78);}
   const color=props.players[props.turn]?.color;
   if(color){
    const base=BASES[color],px=base.x+(color==="red"||color==="blue"?5.25:.75)-7.5,pz=base.y+(color==="red"||color==="green"?5.25:.75)-7.5;

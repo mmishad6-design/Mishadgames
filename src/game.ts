@@ -1,6 +1,6 @@
 export type Color = "red" | "green" | "yellow" | "blue";
 export type Token = { progress: number };
-export type Player = { color: Color; name: string; ai: boolean; tokens: Token[] };
+export type Player = { color: Color; name: string; ai: boolean; tokens: Token[]; rank?: number };
 
 export const COLORS: Color[] = ["red", "green", "yellow", "blue"];
 export const COLOR_NAMES: Record<Color, string> = { red: "Red", green: "Green", yellow: "Yellow", blue: "Blue" };
@@ -137,6 +137,23 @@ export function moveToken(
   }
 
   return { players: next, captured, finished: token.progress === 56 };
+}
+
+export function progressPercent(player: Player): number {
+  if (!player.tokens.length) return 0;
+  const total = player.tokens.reduce((sum, token) => sum + Math.max(0, Math.min(56, token.progress)), 0);
+  return Math.round((total / (player.tokens.length * 56)) * 100);
+}
+
+export function assignPlacement(players: Player[], playerIndex: number): { players: Player[]; completed: boolean; nextTurn: number; winner: string | null } {
+  if (!players[playerIndex] || players[playerIndex].rank) {
+    return { players, completed: players.every(player => !!player.rank), nextTurn: -1, winner: players.find(player => player.rank === 1)?.name ?? null };
+  }
+  const place = players.filter(player => player.rank).length + 1;
+  let ranked = players.map((player, index) => index === playerIndex ? { ...player, rank: place } : player);
+  const completed = ranked.every(player => !!player.rank);
+  const nextTurn = completed ? -1 : Array.from({ length: ranked.length }, (_, offset) => (playerIndex + offset + 1) % ranked.length).find(index => !ranked[index].rank) ?? -1;
+  return { players: ranked, completed, nextTurn, winner: ranked.find(player => player.rank === 1)?.name ?? null };
 }
 
 export function winner(player: Player): boolean {

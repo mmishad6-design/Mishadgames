@@ -7,7 +7,7 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText;
 const game = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
-const { COLORS, START, legalTokens, moveToken, winner } = game;
+const { COLORS, START, assignPlacement, legalTokens, moveToken, progressPercent, winner } = game;
 
 function player(color, progress = [-1, -1, -1, -1]) {
   return {
@@ -86,6 +86,45 @@ test("landing on a safe square does not capture", () => {
 test("winner is declared only after all four tokens finish", () => {
   assert.equal(winner(player("red", [56, 56, 56, 56])), true);
   assert.equal(winner(player("red", [56, 56, 56, 55])), false);
+});
+
+
+test("progress percentage averages all four tokens across their complete routes", () => {
+  assert.equal(progressPercent(player("red", [-1, -1, -1, -1])), 0);
+  assert.equal(progressPercent(player("red", [56, 56, 56, 56])), 100);
+  assert.equal(progressPercent(player("red", [28, 28, -1, -1])), 25);
+});
+
+test("the first finisher is ranked first while remaining players continue", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green"), player("yellow")];
+  const result = assignPlacement(players, 0);
+  assert.equal(result.completed, false);
+  assert.equal(result.players[0].rank, 1);
+  assert.equal(result.players[1].rank, undefined);
+  assert.equal(result.nextTurn, 1);
+});
+
+test("the final remaining player keeps playing and earns the last place by finishing", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green", [56, 56, 56, 56]), player("yellow", [56, 56, 56, 56])];
+  const first = assignPlacement(players, 0);
+  const second = assignPlacement(first.players, 1);
+  assert.equal(second.completed, false);
+  assert.deepEqual(second.players.map(item => item.rank), [1, 2, undefined]);
+  assert.equal(second.nextTurn, 2);
+  const final = assignPlacement(second.players, 2);
+  assert.equal(final.completed, true);
+  assert.deepEqual(final.players.map(item => item.rank), [1, 2, 3]);
+  assert.equal(final.nextTurn, -1);
+  assert.equal(final.winner, "red");
+});
+
+test("placement selection skips players who have already finished", () => {
+  const players = [player("red", [56, 56, 56, 56]), player("green"), player("yellow", [56, 56, 56, 56]), player("blue")];
+  players[0].rank = 1;
+  const result = assignPlacement(players, 2);
+  assert.equal(result.players[2].rank, 2);
+  assert.equal(result.completed, false);
+  assert.equal(result.nextTurn, 3);
 });
 
 process.stdout.write(`\n${passed} game logic checks passed.\n`);
