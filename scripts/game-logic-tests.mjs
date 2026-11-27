@@ -7,7 +7,7 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText;
 const game = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
-const { COLORS, START, legalTokens, moveToken, winner } = game;
+const { COLORS, START, assignPlacement, legalTokens, moveToken, progressPercent, winner } = game;
 
 function player(color, progress = [-1, -1, -1, -1]) {
   return {
