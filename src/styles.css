@@ -208,3 +208,35 @@
  100%{transform:rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1)}
 }
 @media(prefers-reduced-motion:reduce){.board-svg .home-dice.is-rolling .dice-cube{animation:none}}
+
+
+/* Physical 3D board prototype: raised cell faces, visible tile sides and sculpted home platforms. */
+.board-svg .home-base-side{filter:brightness(.72) drop-shadow(0 3px 2px #17251f66)}
+.board-svg .home-base-face{filter:drop-shadow(0 2px 1px #17251f55)}
+.board-svg .track-tile-side{filter:brightness(.72)}
+.board-svg .track-tile-face{filter:drop-shadow(0 1.8px 1px #17251f55)}
+.board-svg .lane-tile-side{filter:brightness(.68)}
+.board-svg .lane-tile-face{filter:drop-shadow(0 1.5px 1px #17251f66)}
+.board-svg .home-base-face,.board-svg .track-tile-face,.board-svg .lane-tile-face{paint-order:stroke fill}
+.board-frame{
+ padding:15px;
+ background:linear-gradient(145deg,#f4e5c4 0%,#c7ae80 54%,#7d6847 100%);
+ box-shadow:0 30px 58px #0009,inset 0 3px 5px #fff9,inset 0 -10px 14px #44351f66;
+}
+.board-svg{
+ transform:rotateX(9deg) rotateZ(-.65deg);
+ transform-origin:center 58%;
+ box-shadow:0 25px 27px #17251f66,0 5px 0 #75664b,0 10px 0 #4c412f,inset 0 0 0 3px #fff9;
+}
+.app-shell[data-theme="dark"] .board-frame{
+ background:linear-gradient(145deg,#718174 0%,#40564b 54%,#24332d 100%);
+ box-shadow:0 30px 58px #000b,inset 0 3px 5px #ffffff30,inset 0 -10px 14px #0008;
+}
+.app-shell[data-theme="dark"] .board-svg{
+ box-shadow:0 25px 27px #0009,0 5px 0 #24332d,0 10px 0 #17231f,inset 0 0 0 3px #ffffff22;
+}
+@media(max-width:600px){
+ .board-frame{padding:8px;perspective:900px}
+ .board-svg{transform:rotateX(7deg) rotateZ(-.45deg)}
+}
+@media(prefers-reduced-motion:reduce){.board-svg{transform:none}}
