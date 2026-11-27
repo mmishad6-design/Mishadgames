@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from "react";
-import {COLORS,PALETTE,chooseAiToken,legalTokens,moveToken,tokenPosition,winner,type Color,type Player} from "./game";
+import {COLORS,PALETTE,chooseAiToken,legalTokens,moveToken,progressPercent,tokenPosition,winner,type Color,type Player} from "./game";
 import {supabase} from "./supabase";
 import ThreeBoard from "./ThreeBoard";
 import TwoDBoard from "./TwoDBoard";
@@ -72,8 +72,8 @@ export default function App(){
   try{return JSON.parse(localStorage.getItem("mishads-ludo-history")||"[]") as MatchRecord[];}catch{return [];}
  });
  const [dice,setDice]=useState<number|null>(null),[lastDice,setLastDice]=useState<number|null>(null),[choices,setChoices]=useState<number[]>([]),[autoMoveIndex,setAutoMoveIndex]=useState<number|null>(null),[,setMessage]=useState("Roll the dice to begin.");const [animatedToken,setAnimatedToken]=useState<{playerIndex:number;tokenIndex:number;pos:[number,number]}|null>(null);
- const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true);
- const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined),tokenMoveTimer=useRef<number|undefined>(undefined);
+ const [started,setStarted]=useState(false),[champion,setChampion]=useState<string|null>(null),[busy,setBusy]=useState(false),[passPending,setPassPending]=useState(false),[soundEnabled,setSoundEnabled]=useState(true),[turnSeconds,setTurnSeconds]=useState(45);
+ const rollTimer=useRef<number|undefined>(undefined),passTimer=useRef<number|undefined>(undefined),aiTimer=useRef<number|undefined>(undefined),tokenMoveTimer=useRef<number|undefined>(undefined),moveSelectedRef=useRef<(index:number)=>void>(()=>{});
  const audioContext=useRef<AudioContext|null>(null);
  const playSound=(kind:"roll"|"move"|"capture"|"win")=>{
   if(!soundEnabled||typeof window==="undefined")return;
@@ -136,10 +136,10 @@ export default function App(){
   setMode("local");setActiveRoomCode(null);localStorage.removeItem("mishads-ludo-online-session");setOnlineError("");
  };
  const backToSetup=()=>{clearTimers();setAutoMoveIndex(null);if(mode==="online")void exitOnlineRoom();setStarted(false);setBusy(false);setPassPending(false);setDice(null);setChoices([]);};
- const nextTurn=(nextPlayers:Player[]=players)=>{clearTimers();setAutoMoveIndex(null);const next=(turn+1)%nextPlayers.length;if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,lastDice,choices:[],message:"Next player’s turn.",champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);}};
+ const nextTurn=(nextPlayers:Player[]=players,message="Next player’s turn.",nextLastDice=lastDice)=>{clearTimers();setAutoMoveIndex(null);const next=Array.from({length:nextPlayers.length},(_,offset)=>(turn+offset+1)%nextPlayers.length).find(index=>!nextPlayers[index]?.rank);if(next===undefined)return;setTurnSeconds(45);if(mode==="online"){void syncOnlineState({players:nextPlayers,turn:next,dice:null,lastDice:nextLastDice,choices:[],message,champion:null,started:true});}else{setPlayers(nextPlayers);setTurn(next);setDice(null);setChoices([]);setBusy(false);setPassPending(false);setMessage(message);}};
  const rollDice=async()=>{
-  if(!started||!current||dice!==null||busy||champion||passPending||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;
-  if(mode==="online"){setBusy(true);const {data,error}=await supabase.rpc("ludo_roll_dice",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error){setOnlineError(error.message);setBusy(false);return;}const rolled=Number(data);const legal=legalTokens(current,rolled,players);setBusy(false);setLastDice(rolled);if(!legal.length){if(rolled===6){void syncOnlineState({players,turn,dice:null,lastDice:rolled,choices:[],message:"Six! No token can move. Roll again.",champion:null,started:true});}else{setPassPending(true);void syncOnlineState({players,turn:(turn+1)%players.length,dice:null,lastDice:rolled,choices:[],message:"No legal move. Turn passes.",champion:null,started:true});}return;}setDice(rolled);setChoices(legal);setOnlineError("");const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)setAutoMoveIndex(autoIndex);return;}
+  if(!started||!current||current.rank||dice!==null||busy||champion||passPending||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;
+  if(mode==="online"){setBusy(true);const {data,error}=await supabase.rpc("ludo_roll_dice",{p_code:activeRoomCode,p_token:getOnlineToken()});if(error){setOnlineError(error.message);setBusy(false);return;}const rolled=Number(data);const legal=legalTokens(current,rolled,players);setBusy(false);setLastDice(rolled);if(!legal.length){nextTurn(players,"No valid move. Turn passes to the next player.",rolled);return;}setDice(rolled);setChoices(legal);setOnlineError("");const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;setMessage(autoIndex!==null?(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically..."):(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens."));if(autoIndex!==null)setAutoMoveIndex(autoIndex);return;}
   setBusy(true);
   playSound("roll");
   // Use an unbiased cryptographic roll: reject the four excess uint32 values
@@ -157,16 +157,13 @@ export default function App(){
    setLastDice(rolled);
    const legal=legalTokens(current,rolled,players);
    if(legal.length===0){
-    setDice(null);setChoices([]);
-    if(rolled===6){setMessage("Six! No token can move. Roll again.");}
-    else{setMessage("No legal move. Turn passes to the next player.");setPassPending(true);passTimer.current=window.setTimeout(()=>nextTurn(),1100);}
-    return;
+    setDice(null);setChoices([]);setMessage("No valid move. Turn passes to the next player.");nextTurn(players,"No valid move. Turn passes to the next player.",rolled);return;
    }
    setDice(rolled);setChoices(legal);const allHome=rolled===6&&current.tokens.every(token=>token.progress===-1);const autoIndex=!current.ai&&(legal.length===1||allHome)?legal[0]:null;if(autoIndex!==null){setAutoMoveIndex(autoIndex);setMessage(allHome?"All tokens are home. Token "+(autoIndex+1)+" moves automatically.":"Only one legal move. Moving automatically...");}else{setAutoMoveIndex(null);setMessage(rolled===6?"Six! Choose a token to move.":"Choose one of the highlighted tokens.");}
   },450);
  };
  const moveSelected=(tokenIndex:number)=>{
-  if(dice===null||!choices.includes(tokenIndex)||!current||champion||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;
+  if(dice===null||!choices.includes(tokenIndex)||!current||current.rank||champion||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;
   setAutoMoveIndex(null);
   const rolled=dice;
   const result=moveToken(players,turn,tokenIndex,rolled);
@@ -186,8 +183,18 @@ export default function App(){
     playSound(result.captured>0?"capture":"move");
     if(winner(result.players[turn])){
      playSound("win");
-     setChampion(current.name);setMessage(current.name+" wins the game!");setDice(null);setChoices([]);if(mode==="online")void syncOnlineState({players:result.players,turn,dice:null,lastDice,choices:[],message:current.name+" wins the game!",champion:current.name,started:true});
-     setMatchHistory(history=>[{id:Date.now(),date:new Date().toISOString(),mode,players:result.players.map(player=>player.name),winner:current.name},...history].slice(0,50));
+     const place=result.players.filter(player=>player.rank).length+1;
+     let rankedPlayers=result.players.map((player,index)=>index===turn?{...player,rank:place}:player);
+     const unfinished=rankedPlayers.filter(player=>!player.rank);
+     const completed=unfinished.length<=1;
+     if(completed&&unfinished.length===1)rankedPlayers=rankedPlayers.map(player=>player.rank?player:{...player,rank:place+1});
+     const first=rankedPlayers.find(player=>player.rank===1)?.name||current.name;
+     const message=completed?"Match complete. All player positions are decided.":current.name+" finished in "+(place===1?"1st":place===2?"2nd":place===3?"3rd":place+"th")+" place. The remaining players continue.";
+     setPlayers(rankedPlayers);setDice(null);setChoices([]);setMessage(message);setTurnSeconds(45);
+     const next=completed?turn:Array.from({length:rankedPlayers.length},(_,offset)=>(turn+offset+1)%rankedPlayers.length).find(index=>!rankedPlayers[index].rank)??turn;
+     if(completed)setChampion("Match complete");else setTurn(next);
+     if(mode==="online")void syncOnlineState({players:rankedPlayers,turn:next,dice:null,lastDice,choices:[],message,champion:completed?"Match complete":null,started:true});
+     if(completed)setMatchHistory(history=>[{id:Date.now(),date:new Date().toISOString(),mode,players:rankedPlayers.map(player=>player.name),winner:first},...history].slice(0,50));
      return;
     }
     if(rolled===6||result.captured>0||result.finished){
@@ -200,6 +207,7 @@ export default function App(){
   setChoices([]);
   animateStep(1);
  };
+ moveSelectedRef.current=moveSelected;
  useEffect(()=>{if(autoMoveIndex===null||dice===null||!choices.includes(autoMoveIndex)||!started||champion||busy||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn)))return;const timer=window.setTimeout(()=>{moveSelected(autoMoveIndex);setAutoMoveIndex(null);},700);return()=>window.clearTimeout(timer);},[autoMoveIndex,dice,choices,started,champion,busy,resetRequest?.status,mode,onlineSeatIndices,turn,players]);
  useEffect(()=>{
   if(!started||mode==="online"||!current?.ai||champion||busy||passPending)return;
@@ -208,7 +216,14 @@ export default function App(){
    else if(choices.length)moveSelected(chooseAiToken(players,turn,dice,choices));
   },850);
   return()=>{if(aiTimer.current!==undefined)window.clearTimeout(aiTimer.current)};
- },[started,current?.ai,turn,dice,choices,busy,champion,passPending,players]);
+ },[started,current?.ai,current?.rank,turn,dice,choices,busy,champion,passPending,players]);
+ useEffect(()=>{
+  if(dice===null||!choices.length||!started||busy||champion||current?.rank||resetRequest?.status==="pending"||(mode==="online"&&!onlineSeatIndices.includes(turn))){setTurnSeconds(45);return;}
+  const deadline=Date.now()+45000;setTurnSeconds(45);
+  const tick=window.setInterval(()=>setTurnSeconds(Math.max(0,Math.ceil((deadline-Date.now())/1000))),250);
+  const timeout=window.setTimeout(()=>{const index=chooseAiToken(players,turn,dice,choices);if(index>=0)moveSelectedRef.current(index);},45000);
+  return()=>{window.clearInterval(tick);window.clearTimeout(timeout);};
+ },[dice,choices.join(","),started,busy,champion,current?.rank,resetRequest?.status,mode,onlineSeatIndices.join(","),turn]);
  useEffect(()=>()=>clearTimers(),[]);
  useEffect(()=>{
   if(!activeRoomCode||mode!=="online")return;
@@ -292,7 +307,7 @@ export default function App(){
    </section>}
 
   </section>:<section className="play-wrap">
-   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">GAME COMPLETE</span><strong>{champion} wins!</strong><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={mode==="online"?()=>void requestOnlineReset():resetGame} disabled={mode==="online"&&(onlineIndex!==0||onlineBusy||resetRequest?.status==="pending")}>{mode==="online"?"REQUEST REPLAY":"PLAY AGAIN"} <span>↻</span></button></div></div>}
+   {champion&&<div className="winner-celebration" role="status" aria-live="assertive"><div className="winner-confetti" aria-hidden="true">{Array.from({length:18},(_,i)=><i key={i} style={{"--piece":i} as React.CSSProperties}/>)}</div><div className="winner-content"><span className="winner-kicker">FINAL STANDINGS</span><strong>Match complete</strong><div className="final-rankings">{players.slice().sort((a,b)=>(a.rank||99)-(b.rank||99)).map(player=><div key={player.color}><b>{player.rank===1?"🥇":player.rank===2?"🥈":player.rank===3?"🥉":player.rank+"."} {player.name}</b><span>{progressPercent(player)}%</span></div>)}</div><p>Well played. Ready for another round?</p><button className="winner-replay" onClick={mode==="online"?()=>void requestOnlineReset():resetGame} disabled={mode==="online"&&(onlineIndex!==0||onlineBusy||resetRequest?.status==="pending")}>{mode==="online"?"REQUEST REPLAY":"PLAY AGAIN"} <span>↻</span></button></div></div>}
    {mode==="online"&&resetRequest&&<div className="reset-request" role="status">
     {resetRequest.status==="pending"?<>
      <b>Host requested a game reset</b>
@@ -300,7 +315,7 @@ export default function App(){
      {onlineIndex!==0&&<div className="reset-actions"><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(true)}>ACCEPT RESET</button><button type="button" disabled={onlineBusy||Date.now()>Number(resetRequest.expiresAt)} onClick={()=>void respondOnlineReset(false)}>DECLINE</button></div>}
     </>:resetRequest.status==="declined"?<p>A player declined the reset. The game was not reset.</p>:resetRequest.status==="expired"?<p>Reset request expired. The game was not reset.</p>:resetRequest.status==="approved"?<p>Everyone approved. The game has been reset.</p>:null}
    </div>}
-   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="game-heading-actions"><div className="board-view-switch" role="group" aria-label="Board view"><button type="button" className={boardView==="2d"?"selected":""} aria-pressed={boardView==="2d"} onClick={()=>setBoardView("2d")}>2D</button><button type="button" className={boardView==="3d"?"selected":""} aria-pressed={boardView==="3d"} onClick={()=>setBoardView("3d")}>3D</button></div>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div></div>
+   <div className="game-heading"><button className="back-btn" onClick={backToSetup}>← Setup</button><div className="game-heading-actions">{dice!==null&&choices.length>0&&<span className="turn-countdown" role="status">AUTO MOVE IN {turnSeconds}s</span>}<div className="board-view-switch" role="group" aria-label="Board view"><button type="button" className={boardView==="2d"?"selected":""} aria-pressed={boardView==="2d"} onClick={()=>setBoardView("2d")}>2D</button><button type="button" className={boardView==="3d"?"selected":""} aria-pressed={boardView==="3d"} onClick={()=>setBoardView("3d")}>3D</button></div>{mode==="online"?(onlineIndex===0?<button className="back-btn" onClick={()=>void requestOnlineReset()} disabled={onlineBusy||resetRequest?.status==="pending"}>↻ Request Reset</button>:null):<button className="back-btn" onClick={resetGame}>↻ Restart</button>}</div></div>
    <div className="game-layout"><div className="board-frame"><Board view={boardView} players={players} turn={turn} choices={mode==="online"&&(!onlineSeatIndices.includes(turn)||resetRequest?.status==="pending")?[]:choices} dice={dice} lastDice={lastDice} rolling={busy} canRoll={started&&dice===null&&!busy&&!champion&&!passPending&&!current?.ai&&resetRequest?.status!=="pending"&&(mode!=="online"||onlineSeatIndices.includes(turn))} onRoll={()=>void rollDice()} onMove={moveSelected} animatedToken={animatedToken}/></div>
     
    </div>
